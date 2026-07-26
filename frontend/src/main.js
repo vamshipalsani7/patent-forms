@@ -1,4 +1,4 @@
-import './style.css'
+import './styles/main.css'
 
 document.querySelector('#app').innerHTML = `
 <div class="container">
@@ -42,3 +42,11 @@ pdfInput.addEventListener("change", () => {
     status.textContent = pdfInput.files[0].name
 
 })
+fetch("http://127.0.0.1:8000/")
+    .then(response => response.json())
+    .then(data => {
+        console.log(data)
+    })
+    .catch(error => {
+        console.error(error)
+    })
