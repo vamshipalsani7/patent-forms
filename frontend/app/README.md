@@ -79,13 +79,22 @@ already-approved file in Sprint 1.
 
 ## Run
 
-Serve the **repository root** (not just `frontend/`) so `/docs/...` resolves:
+Definition URLs are resolved **relative to the page** (`frontend/app/` →
+`../../docs/…`), so the app works both over HTTP and when `index.html` is
+opened directly from disk via `file://`.
+
+To serve it, serve the **repository root** (not just `frontend/`), so that
+`../../docs/…` stays inside the served tree:
 
 ```bash
 python -m http.server 8991 --bind 127.0.0.1
 ```
 
 Then open `http://127.0.0.1:8991/frontend/app/index.html`.
+
+Note that autofill suggestions additionally require the backend on
+`http://localhost:8000`; without it the form still opens and is fully
+editable, just with no suggestions.
 
 The pre-existing Vite prototype at `frontend/index.html` / `frontend/src/`
 (the PDF-upload landing page from an earlier phase) was left untouched — this

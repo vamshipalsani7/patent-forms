@@ -17,8 +17,9 @@
     which form is being rendered — this harness page fetches the definition
     and passes it in, exactly like the app shell does.
 
-    Usage: open with ?def=/path/to/some.definition.json to preview any
-    definition file. Defaults to the Form 3 reference implementation.
+    Usage: open with ?def=path/to/some.definition.json to preview any
+    definition file (resolved relative to this page). Defaults to the Form 3
+    reference implementation.
   -->
   <header id="topbar">
     <strong>Form Renderer — standalone harness</strong>
@@ -32,8 +33,14 @@
   <script src="form-renderer.js"></script>
   <script>
     (function () {
-      var defPath = new URLSearchParams(location.search).get("def") ||
-        "/docs/specifications/definitions/form_03.definition.json";
+      // Resolved relative to this page (frontend/renderer/ → ../../docs/…),
+      // not root-absolute: a leading "/" resolves to the drive root under
+      // file://, which points outside the project.
+      var defPath = new URL(
+        new URLSearchParams(location.search).get("def") ||
+          "../../docs/specifications/definitions/form_03.definition.json",
+        document.baseURI
+      ).href;
       document.getElementById("def-path").textContent = defPath;
 
       fetch(defPath)
