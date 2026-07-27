@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://patent-forms.local/schema/form-definition.schema.json",
+  "title": "IPO Form Definition",
+  "description": "Generic, form-agnostic definition schema capable of representing every Indian Patent Office (IPO) form documented in docs/specifications/. A form-definition document that validates against this schema fully describes one form's sections, fields, tables, choices, conditional logic, validation, signature blocks, repeatable rows and auto-fill hints — without any UI, rendering or backend code. Governing product principle: the software SUGGESTS, the user DECIDES. Auto-fill hints describe opportunity only; a value is never locked and every field is always editable.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "formId", "formNumber", "officialName", "sections"],
+  "properties": {
+    "schemaVersion": {
+      "type": "string",
+      "const": "1.0",
+      "description": "Version of THIS definition schema the document targets."
+    },
+    "formId": {
+      "$ref": "#/$defs/identifier",
+      "description": "Stable machine id, matching the spec file stem, e.g. \"form_03\", \"form_18a\"."
+    },
+    "formNumber": {
+      "type": "string",
+      "description": "Official form number as printed, kept as a string to allow variants, e.g. \"3\", \"7A\", \"18A\"."
+    },
+    "officialName": {
+      "type": "string",
+      "description": "Exact official name transcribed from the PDF."
+    },
+    "purpose": { "type": "string" },
+    "legalReference": { "$ref": "#/$defs/legalReference" },
+    "pageCount": { "type": "integer", "minimum": 1 },
+    "fee": { "$ref": "#/$defs/fee" },
+    "layout": { "$ref": "#/$defs/layout" },
+    "sections": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Ordered sections. Array order IS the printed order.",
+      "items": { "$ref": "#/$defs/section" }
+    },
+    "constraints": {
+      "type": "array",
+      "description": "Form-level cross-field constraints (e.g. exactly-one-of, at-least-one-of, custom cross-field asserts).",
+      "items": { "$ref": "#/$defs/constraint" }
+    },
+    "attachments": {
+      "type": "array",
+      "description": "Documents the form requires or references as enclosures.",
+      "items": { "$ref": "#/$defs/attachment" }
+    },
+    "notes": {
+      "type": "array",
+      "description": "Verbatim footnotes / special notes from the form (strike-out instructions, warnings, fee notes).",
+      "items": { "type": "string" }
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Free-form provenance/authoring metadata (source PDF, transcriber, revision date). Not consumed by rendering.",
+      "additionalProperties": true
+    }
+  },
+
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "description": "snake/kebab id, unique within its scope. Field paths join ids with dots (see README).",
+      "pattern": "^[a-z0-9]+(?:[_-][a-z0-9]+)*$"
+    },
+
+    "legalReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "act": { "type": "array", "items": { "type": "string" } },
+        "rules": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+
+    "fee": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model"],
+      "properties": {
+        "model": {
+          "enum": ["first_schedule", "none", "stamp_duty", "other"],
+          "description": "\"first_schedule\" = fee per the First Schedule; \"none\" = no fee on the form face (e.g. Form 27 \"No Fee\"); \"stamp_duty\" = stamped instrument (e.g. Form 26); \"other\" = see note."
+        },
+        "note": { "type": "string" },
+        "dependsOn": {
+          "type": "array",
+          "description": "Factors the fee scales with, e.g. [\"applicant_category\", \"claim_count\", \"page_count\"] for Form 1.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+
+    "layout": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "columns": { "type": "integer", "minimum": 1, "description": "Printed column count of the form face (many IPO forms are 2-column label/content tables)." },
+        "notes": { "type": "string" }
+      }
+    },
+
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "fields"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "helpText": { "type": "string", "description": "Guidance surfaced with the section (e.g. the left-column instruction printed beside a numbered row)." },
+        "officeUseOnly": { "type": "boolean", "default": false, "description": "True for \"FOR OFFICE USE ONLY\" blocks: reproduce on preview but read-only for the filer." },
+        "visibleWhen": { "$ref": "#/$defs/condition" },
+        "fields": { "type": "array", "items": { "$ref": "#/$defs/field" } },
+        "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+        "note": { "type": "string" }
+      }
+    },
+
+    "field": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "kind": {
+          "enum": [
+            "text",
+            "textarea",
+            "number",
+            "date",
+            "checkbox",
+            "checkboxGroup",
+            "radio",
+            "dropdown",
+            "strikeoutChoice",
+            "signature",
+            "signatureBlock",
+            "boilerplate",
+            "group",
+            "table"
+          ],
+          "description": "Field kind. checkbox=single boolean; checkboxGroup=several individually-addressable checkboxes (multi-select); radio/dropdown=single-select; strikeoutChoice=single-select whose unchosen option(s) are struck through on export; group/signatureBlock=containers of nested fields; table=columns + repeatable rows; boilerplate=static pre-printed text (no input)."
+        },
+        "label": { "type": "string" },
+        "text": { "type": "string", "description": "Verbatim pre-printed content for kind=boilerplate." },
+        "description": { "type": "string" },
+        "helpText": { "type": "string" },
+        "placeholder": { "type": "string" },
+        "default": true,
+        "format": {
+          "type": "string",
+          "description": "Semantic format hint (open vocabulary). Recommended values: email, phone, applicationNumber, patentNumber, pincode, aadhaar, country, patentOffice, financialYear, currency, ipc, address."
+        },
+        "required": { "type": "boolean", "default": false },
+        "requiredWhen": { "$ref": "#/$defs/condition" },
+        "visibleWhen": { "$ref": "#/$defs/condition" },
+        "enabledWhen": { "$ref": "#/$defs/condition" },
+        "selection": { "enum": ["single", "multiple"], "description": "For choice kinds. radio/dropdown/strikeoutChoice => single; checkboxGroup => multiple." },
+        "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/option" } },
+        "fields": { "type": "array", "description": "Child fields for kind=group / signatureBlock.", "items": { "$ref": "#/$defs/field" } },
+        "columns": { "type": "array", "minItems": 1, "description": "Column definitions for kind=table.", "items": { "$ref": "#/$defs/tableColumn" } },
+        "repeatable": { "$ref": "#/$defs/repeatable" },
+        "validation": { "$ref": "#/$defs/validation" },
+        "autofill": { "$ref": "#/$defs/autofill" },
+        "sensitive": { "$ref": "#/$defs/sensitive" },
+        "export": { "$ref": "#/$defs/export" },
+        "officeUseOnly": { "type": "boolean", "default": false },
+        "constraints": { "type": "array", "items": { "$ref": "#/$defs/constraint" } },
+        "presentation": { "$ref": "#/$defs/presentation" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["radio", "dropdown", "checkboxGroup", "strikeoutChoice"] } } },
+          "then": { "required": ["options"] }
+        },
+        {
+          "if": { "properties": { "kind": { "enum": ["group", "signatureBlock"] } } },
+          "then": { "required": ["fields"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "table" } } },
+          "then": { "required": ["columns"] }
+        },
+        {
+          "if": { "properties": { "kind": { "const": "boilerplate" } } },
+          "then": { "required": ["text"] }
+        }
+      ]
+    },
+
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["value"],
+      "properties": {
+        "value": { "type": "string" },
+        "label": { "type": "string" },
+        "default": { "type": "boolean" },
+        "help": { "type": "string" }
+      }
+    },
+
+    "tableColumn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "cell"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "label": { "type": "string" },
+        "cell": { "$ref": "#/$defs/cell" }
+      }
+    },
+
+    "cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind"],
+      "description": "A table cell is a scalar field (no nested tables or groups).",
+      "properties": {
+        "kind": { "enum": ["text", "textarea", "number", "date", "checkbox", "radio", "dropdown", "strikeoutChoice"] },
+        "label": { "type": "string" },
+        "options": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/option" } },
+        "selection": { "enum": ["single", "multiple"] },
+        "format": { "type": "string" },
+        "required": { "type": "boolean", "default": false },
+        "requiredWhen": { "$ref": "#/$defs/condition" },
+        "validation": { "$ref": "#/$defs/validation" },
+        "autofill": { "$ref": "#/$defs/autofill" },
+        "sensitive": { "$ref": "#/$defs/sensitive" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "kind": { "enum": ["radio", "dropdown", "strikeoutChoice"] } } },
+          "then": { "required": ["options"] }
+        }
+      ]
+    },
+
+    "repeatable": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Marks a field (typically group or table) or its rows as repeatable. Applied to a group => the whole block repeats (e.g. applicant block (a)-(c)). Applied to a table => rows repeat.",
+      "properties": {
+        "min": { "type": "integer", "minimum": 0, "default": 0 },
+        "max": { "type": ["integer", "null"], "minimum": 1, "description": "null = unbounded." },
+        "itemLabel": { "type": "string", "description": "Singular label for one instance, e.g. \"Applicant\", \"Inventor\", \"Foreign application\"." }
+      }
+    },
+
+    "condition": {
+      "type": "object",
+      "description": "Boolean expression over field values. Used by visibleWhen/requiredWhen/enabledWhen and by constraints. A leaf references another field by its dotted path (see README). For multi-select fields, op \"in\" tests membership of a value within the selection.",
+      "oneOf": [
+        {
+          "additionalProperties": false,
+          "required": ["allOf"],
+          "properties": { "allOf": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["anyOf"],
+          "properties": { "anyOf": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/condition" } } }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["not"],
+          "properties": { "not": { "$ref": "#/$defs/condition" } }
+        },
+        {
+          "additionalProperties": false,
+          "required": ["field", "op"],
+          "properties": {
+            "field": { "type": "string", "description": "Dotted path of the referenced field." },
+            "op": { "enum": ["equals", "notEquals", "in", "notIn", "isFilled", "isEmpty", "gt", "gte", "lt", "lte", "matches"] },
+            "value": true
+          },
+          "allOf": [
+            {
+              "if": { "properties": { "op": { "enum": ["equals", "notEquals", "in", "notIn", "gt", "gte", "lt", "lte", "matches"] } } },
+              "then": { "required": ["value"] }
+            }
+          ]
+        }
+      ]
+    },
+
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Intrinsic (single-field) validators. Cross-field checks belong in section/form constraints.",
+      "properties": {
+        "pattern": { "type": "string", "format": "regex" },
+        "patternMessage": { "type": "string" },
+        "minLength": { "type": "integer", "minimum": 0 },
+        "maxLength": { "type": "integer", "minimum": 0 },
+        "min": { "type": ["number", "string"], "description": "Numeric minimum, or a date (ISO) / date-token for date fields." },
+        "max": { "type": ["number", "string"] },
+        "notFuture": { "type": "boolean", "description": "Date must not be in the future." },
+        "notPast": { "type": "boolean" },
+        "message": { "type": "string" }
+      }
+    },
+
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "message"],
+      "description": "A cross-field rule. Attach at group/section/form level.",
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "type": {
+          "enum": ["exactlyOneOf", "atLeastOneOf", "atMostOneOf", "allOrNone", "requiredTogether", "custom"],
+          "description": "Set-style rules operate on `fields`; \"custom\" evaluates the `assert` condition."
+        },
+        "fields": { "type": "array", "items": { "type": "string" }, "description": "Dotted field paths the set-style rule ranges over." },
+        "when": { "$ref": "#/$defs/condition", "description": "Guard: rule only applies when this holds." },
+        "assert": { "$ref": "#/$defs/condition", "description": "For type=custom: the condition that must hold." },
+        "message": { "type": "string" },
+        "severity": { "enum": ["error", "warning"], "default": "error" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "type": { "const": "custom" } } },
+          "then": { "required": ["assert"] }
+        },
+        {
+          "if": { "properties": { "type": { "enum": ["exactlyOneOf", "atLeastOneOf", "atMostOneOf", "allOrNone", "requiredTogether"] } } },
+          "then": { "required": ["fields"] }
+        }
+      ]
+    },
+
+    "autofill": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["strategy"],
+      "description": "How this field COULD be pre-filled from uploaded documents. Advisory only — the value is never locked and the user may always override (product principle: software suggests, user decides). `sources[].key` is an abstract semantic pointer into the internal extraction object; the concrete extraction schema is intentionally NOT bound here (it is still being modelled).",
+      "properties": {
+        "strategy": {
+          "enum": ["direct", "derived", "manual"],
+          "description": "direct = copy a value from a source; derived = computed/inferred (see derivation); manual = user must enter (no auto source)."
+        },
+        "sources": { "type": "array", "items": { "$ref": "#/$defs/autofillSource" } },
+        "derivation": { "type": "string", "description": "Human-readable description of the derivation for strategy=derived." },
+        "confidence": { "enum": ["high", "medium", "low"] }
+      }
+    },
+
+    "autofillSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceType", "key"],
+      "properties": {
+        "sourceType": {
+          "type": "string",
+          "description": "Origin document/type (open vocabulary). Recommended: form1, form2_specification, form5, form26_authorisation, form28, patent_certificate, priority_document, pct_document, assignment_document, publication_record."
+        },
+        "key": {
+          "type": "string",
+          "description": "Semantic key within the source (open vocabulary), e.g. applicant.name, invention.title, application.number, application.filingDate, patent.number, patent.grantDate, agent.inpaNumber, foreignApplications[].country."
+        }
+      }
+    },
+
+    "sensitive": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Flags personal/sensitive data handling requirements observed on the form (e.g. Form 1 OTP fields, Form 8A Aadhaar, Form 18A female photo ID).",
+      "properties": {
+        "pii": { "type": "boolean" },
+        "redacted": { "type": "boolean", "description": "Redacted in the published/official record." },
+        "requiresOtp": { "type": "boolean", "description": "\"OTP verification mandatory\" field." },
+        "note": { "type": "string" }
+      }
+    },
+
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Hints for reproducing the field on the exported/preview form so it matches the official layout.",
+      "properties": {
+        "verbatim": { "type": "boolean", "description": "Reproduce the text exactly (boilerplate/undertakings)." },
+        "strikeoutUnselected": { "type": "boolean", "description": "For strikeoutChoice: strike through the option(s) not chosen." }
+      }
+    },
+
+    "presentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Light, renderer-agnostic layout hints. NOT UI code — just ordering/grouping metadata.",
+      "properties": {
+        "columnSpan": { "type": "integer", "minimum": 1 },
+        "multiline": { "type": "boolean" },
+        "group": { "type": "string", "description": "Free tag to visually group sibling fields." }
+      }
+    },
+
+    "attachment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label"],
+      "properties": {
+        "id": { "$ref": "#/$defs/identifier" },
+        "label": { "type": "string" },
+        "required": { "type": "boolean", "default": false },
+        "requiredWhen": { "$ref": "#/$defs/condition" },
+        "inDuplicate": { "type": "boolean", "description": "Form requires copies (e.g. \"in duplicate\")." },
+        "note": { "type": "string" }
+      }
+    }
+  }
+}

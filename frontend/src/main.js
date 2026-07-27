@@ -12,6 +12,9 @@ document.querySelector('#app').innerHTML = `
     <button id="uploadBtn" class="upload-btn">
         Select PDF
     </button>
+    <button id="processBtn" class="upload-btn">
+    Process PDF
+    </button>
 
     <input
         type="file"
@@ -50,3 +53,26 @@ fetch("http://127.0.0.1:8000/")
     .catch(error => {
         console.error(error)
     })
+    const processBtn = document.getElementById("processBtn")
+
+processBtn.addEventListener("click", async () => {
+
+    if (pdfInput.files.length === 0) {
+        alert("Please select a PDF first.")
+        return
+    }
+
+    const formData = new FormData()
+
+    formData.append("file", pdfInput.files[0])
+
+    const response = await fetch("http://127.0.0.1:8000/upload", {
+        method: "POST",
+        body: formData
+    })
+
+    const result = await response.json()
+
+    alert(result.message + "\n" + result.filename)
+
+})

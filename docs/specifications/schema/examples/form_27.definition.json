@@ -1,0 +1,204 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_27",
+  "formNumber": "27",
+  "officialName": "Statement Regarding the Working of Patented Invention(s) on a Commercial Scale in India",
+  "purpose": "Annual statement reporting whether each patented invention was worked in India in a financial year, reasons if not worked, and licensing availability.",
+  "legalReference": {
+    "act": ["The Patents Act, 1970 (39 of 1970) - Section 146(2)"],
+    "rules": ["The Patents Rules, 2003 - Rule 131(1)"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "none", "note": "Marked 'No Fee' on the form face." },
+  "layout": { "columns": 2, "notes": "Two-column table with six numbered rows." },
+
+  "sections": [
+    {
+      "id": "patentee",
+      "title": "Patentee/Licensee and Patent Number(s)",
+      "helpText": "1. Insert name, address, nationality, patent number(s). One form may cover multiple related patents of the same patentee(s).",
+      "fields": [
+        {
+          "id": "capacity",
+          "kind": "strikeoutChoice",
+          "label": "Patentee(s) / Licensee",
+          "required": true,
+          "options": [ { "value": "patentee", "label": "Patentee(s)" }, { "value": "licensee", "label": "Licensee" } ],
+          "export": { "strikeoutUnselected": true }
+        },
+        {
+          "id": "declarant",
+          "kind": "textarea",
+          "label": "Name, address, nationality",
+          "format": "address",
+          "required": true,
+          "autofill": { "strategy": "direct", "sources": [ { "sourceType": "patent_certificate", "key": "patentee.details" } ], "confidence": "high" }
+        },
+        {
+          "id": "patent_numbers",
+          "kind": "text",
+          "label": "Patent number(s)",
+          "format": "patentNumber",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Patent number" },
+          "autofill": { "strategy": "direct", "sources": [ { "sourceType": "patent_certificate", "key": "patent.number" } ], "confidence": "high" }
+        }
+      ]
+    },
+
+    {
+      "id": "financial_year",
+      "title": "Financial Year",
+      "helpText": "2. State the financial year to which the statement relates.",
+      "fields": [
+        {
+          "id": "financial_year",
+          "kind": "text",
+          "label": "In respect of the financial year",
+          "format": "financialYear",
+          "required": true,
+          "validation": { "pattern": "^[0-9]{4}[-/][0-9]{2,4}$", "patternMessage": "Expected a financial year, e.g. 2024-2025." },
+          "autofill": { "strategy": "derived", "derivation": "Default to the most recent completed financial year.", "confidence": "medium" }
+        }
+      ]
+    },
+
+    {
+      "id": "worked_status",
+      "title": "Worked / Not Worked",
+      "helpText": "3. State whether each patent is worked or not worked.",
+      "fields": [
+        {
+          "id": "worked_not_worked",
+          "kind": "table",
+          "label": "Worked / not worked per patent",
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Patent" },
+          "columns": [
+            { "id": "patent_number", "label": "Patent Number(s)", "cell": { "kind": "text", "format": "patentNumber", "required": true, "autofill": { "strategy": "direct", "sources": [ { "sourceType": "patent_certificate", "key": "patent.number" } ], "confidence": "high" } } },
+            { "id": "worked", "label": "Worked [Tick if applicable]", "cell": { "kind": "checkbox" } },
+            { "id": "not_worked", "label": "Not worked [Tick if applicable]", "cell": { "kind": "checkbox" } }
+          ]
+        }
+      ],
+      "constraints": [
+        {
+          "id": "worked_xor_notworked",
+          "type": "custom",
+          "assert": { "not": { "allOf": [ { "field": "worked_status.worked_not_worked.worked", "op": "equals", "value": true }, { "field": "worked_status.worked_not_worked.not_worked", "op": "equals", "value": true } ] } },
+          "message": "For each patent row, tick exactly one of Worked / Not worked (not both).",
+          "severity": "error"
+        }
+      ]
+    },
+
+    {
+      "id": "not_worked_reasons",
+      "title": "If Not Worked, Reasons",
+      "helpText": "4. If not worked, tick the appropriate reason(s).",
+      "fields": [
+        {
+          "id": "reasons",
+          "kind": "checkboxGroup",
+          "label": "Reasons for not working",
+          "selection": "multiple",
+          "options": [
+            { "value": "development", "label": "Patented Invention is under development/ commercial trial" },
+            { "value": "regulatory", "label": "Patented Invention is under Review/approval with Regulatory authorities" },
+            { "value": "licensing", "label": "Exploring commercial licensing" },
+            { "value": "other", "label": "Any other, may specify" }
+          ]
+        },
+        {
+          "id": "other_reason_text",
+          "kind": "text",
+          "label": "Any other reason (specify)",
+          "requiredWhen": { "field": "not_worked_reasons.reasons", "op": "in", "value": "other" },
+          "visibleWhen": { "field": "not_worked_reasons.reasons", "op": "in", "value": "other" }
+        }
+      ]
+    },
+
+    {
+      "id": "licensing",
+      "title": "Availability for Licensing",
+      "helpText": "5. Whether the patent is available for licensing.",
+      "fields": [
+        {
+          "id": "available_for_licensing",
+          "kind": "radio",
+          "label": "Whether the patent is available for licensing",
+          "required": true,
+          "selection": "single",
+          "options": [ { "value": "yes", "label": "YES" }, { "value": "no", "label": "NO" } ]
+        },
+        {
+          "id": "licensing_email",
+          "kind": "text",
+          "label": "Email address",
+          "format": "email",
+          "requiredWhen": { "field": "licensing.available_for_licensing", "op": "equals", "value": "yes" },
+          "visibleWhen": { "field": "licensing.available_for_licensing", "op": "equals", "value": "yes" },
+          "sensitive": { "pii": true, "note": "Contact detail published for licensing enquiries." }
+        },
+        {
+          "id": "licensing_contact",
+          "kind": "text",
+          "label": "Contact Number",
+          "format": "phone",
+          "requiredWhen": { "field": "licensing.available_for_licensing", "op": "equals", "value": "yes" },
+          "visibleWhen": { "field": "licensing.available_for_licensing", "op": "equals", "value": "yes" },
+          "sensitive": { "pii": true }
+        },
+        {
+          "id": "truth_declaration",
+          "kind": "boilerplate",
+          "text": "The facts and matters stated above are true to the best of my/ our knowledge, information and belief.",
+          "export": { "verbatim": true }
+        },
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "Signature",
+      "helpText": "6. To be signed by Patentee(s) / Licensee / Authorised Agent furnishing the statement.",
+      "fields": [
+        {
+          "id": "signature_block",
+          "kind": "signatureBlock",
+          "label": "Signature(s)",
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Signatory" },
+          "fields": [
+            { "id": "signature", "kind": "signature", "label": "Signature", "required": true },
+            { "id": "signatory_name", "kind": "text", "label": "Name" }
+          ]
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "The Patent Office at",
+          "format": "patentOffice",
+          "required": true,
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ]
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "No Fee.",
+    "One form may cover several patents only if they are related and granted to the same patentee(s).",
+    "Annual statutory obligation under Rule 131; non-filing carries penalties."
+  ]
+}

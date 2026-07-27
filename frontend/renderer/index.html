@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Form 3 — Dynamic Renderer (V1)</title>
+  <link rel="stylesheet" href="renderer.css" />
+</head>
+<body>
+  <header id="topbar">
+    <strong>Definition-driven Form Renderer</strong>
+    <span id="def-path"></span>
+    <span class="spacer"></span>
+    <span class="hint">Generic renderer &mdash; no form is hardcoded. It renders whatever the JSON definition declares.</span>
+  </header>
+
+  <section id="completeness" class="completeness" aria-live="polite"></section>
+
+  <main id="app">Loading definition&hellip;</main>
+
+  <script src="form-renderer.js"></script>
+</body>
+</html>
