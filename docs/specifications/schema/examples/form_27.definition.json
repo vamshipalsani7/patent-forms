@@ -32,7 +32,7 @@
           "label": "Name, address, nationality",
           "format": "address",
           "required": true,
-          "autofill": { "strategy": "direct", "sources": [ { "sourceType": "patent_certificate", "key": "patentee.details" } ], "confidence": "high" }
+          "autofill": { "strategy": "direct", "sources": [ { "sourceType": "patent_certificate", "key": "patentee.name" } ], "confidence": "high" }
         },
         {
           "id": "patent_numbers",

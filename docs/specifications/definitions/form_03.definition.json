@@ -273,7 +273,7 @@
             "strategy": "direct",
             "sources": [
               { "sourceType": "assignment_document", "key": "assignee.address" },
-              { "sourceType": "form16", "key": "assignee.address" }
+              { "sourceType": "form16_registration", "key": "assignee.address" }
             ],
             "confidence": "low"
           },

@@ -51,7 +51,9 @@ body {
 .completeness code { background: #eef1f5; padding: 0 4px; border-radius: 3px; }
 
 /* ---- form shell ---- */
-#app { max-width: 980px; margin: 0 auto 60px; padding: 0 16px; }
+/* NOTE: the renderer mounts its output as an element with class "app" (not an
+   id) so multiple host pages can embed it without id collisions. */
+.app { max-width: 980px; margin: 0 auto 60px; padding: 0 16px; }
 
 .form-header {
   text-align: center;

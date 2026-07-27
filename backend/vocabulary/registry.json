@@ -1,0 +1,47 @@
+{
+  "version": "1.0",
+  "description": "Source-of-truth vocabulary for all autofill sourceType and key values used across IPO form definitions. A key may only appear here if at least one form definition's autofill block references it. Generated from demand — not from a model of everything about a patent.",
+
+  "sourceTypes": {
+    "form1":               { "description": "Application for Grant of Patent (Form 1)",                                     "form": "form_01" },
+    "form2_specification": { "description": "Provisional or Complete Specification (Form 2)",                               "form": "form_02" },
+    "form3":               { "description": "Statement and Undertaking Under Section 8 (Form 3)",                           "form": "form_03" },
+    "form5":               { "description": "Declaration as to Inventorship (Form 5)",                                      "form": "form_05" },
+    "form16_registration": { "description": "Application for Registration of Title/Interest in a Patent (Form 16)",         "form": "form_16" },
+    "form26_authorisation":{ "description": "Form for Authorisation of a Patent Agent (Form 26)",                          "form": "form_26" },
+    "form28":              { "description": "Small Entity / Startup / Educational Institution Declaration (Form 28)",        "form": "form_28" },
+    "patent_certificate":  { "description": "Patent Certificate issued by the Indian Patent Office",                        "form": null },
+    "priority_document":   { "description": "Convention / priority application document from a foreign patent office",      "form": null },
+    "pct_document":        { "description": "PCT international application document",                                        "form": null },
+    "assignment_document": { "description": "Deed of assignment or other document transferring proprietorship",             "form": null },
+    "publication_record":  { "description": "Patent gazette entry or other official publication record",                    "form": null }
+  },
+
+  "keys": {
+    "applicant.name":                  { "type": "string", "description": "Full name of the applicant (one entry per applicant for repeatable fields)" },
+    "applicant.address":               { "type": "string", "description": "Full postal address of the applicant" },
+    "applicant.nationality":           { "type": "string", "description": "Nationality of the applicant" },
+    "applicant.country":               { "type": "string", "description": "Country of residence of the applicant" },
+    "application.number":              { "type": "string", "description": "IPO application number (e.g. 202211012345)" },
+    "application.filingDate":          { "type": "date",   "description": "Date the application was filed with the IPO (ISO-8601)" },
+    "invention.title":                 { "type": "string", "description": "Title of the invention as declared on the application" },
+    "signatory.name":                  { "type": "string", "description": "Full name of the natural person who signed the document" },
+    "agent.name":                      { "type": "string", "description": "Full name of the authorised registered patent agent" },
+    "agent.inpaNumber":                { "type": "string", "description": "Patent agent's IN/PA registration number" },
+    "assignee.name":                   { "type": "string", "description": "Full name of the assignee" },
+    "assignee.address":                { "type": "string", "description": "Full postal address of the assignee" },
+    "patent.number":                   { "type": "string", "description": "Patent number assigned by the IPO" },
+    "patent.grantDate":                { "type": "date",   "description": "Date the patent was granted (ISO-8601)" },
+    "patentee.name":                   { "type": "string", "description": "Full name of the patentee (as on the patent certificate)" },
+    "patentee.address":                { "type": "string", "description": "Address of the patentee (as on the patent certificate)" },
+    "patentee.nationality":            { "type": "string", "description": "Nationality of the patentee (as on the patent certificate)" },
+    "foreignApplications[].country":   { "type": "string", "description": "Country of a corresponding foreign application" },
+    "foreignApplications[].filingDate":{ "type": "date",   "description": "Filing date of a corresponding foreign application (ISO-8601)" },
+    "foreignApplications[].number":    { "type": "string", "description": "Application number in the foreign country" }
+  },
+
+  "deprecated": {
+    "form16":          "Renamed to 'form16_registration'. Caught by lint.py as unknown sourceType.",
+    "patentee.details":"Split into atomic keys: patentee.name, patentee.address, patentee.nationality. Composite blobs cannot be conflict-resolved or validated."
+  }
+}

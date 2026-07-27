@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Patent Forms</title>
+  <link rel="stylesheet" href="../renderer/renderer.css" />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <header id="appbar">
+    <div class="appbar-logo">⚖</div>
+    <div class="appbar-title-wrap">
+      <div class="appbar-title">Patent Forms</div>
+      <div class="appbar-subtitle">IPO Form Preparation</div>
+    </div>
+  </header>
+
+  <div id="shell">
+    <aside id="sidebar">
+      <div id="documents-panel" class="panel-section documents-panel"></div>
+      <div id="forms-panel" class="panel-section forms-panel"></div>
+    </aside>
+    <section id="main"></section>
+  </div>
+
+  <!-- App-shell modules (plain scripts, no bundler — matches frontend/renderer/) -->
+  <script src="dom.js"></script>
+
+  <!-- Extraction: must load before documentUpload.js (which references extractionClient) -->
+  <script src="extractionClient.js"></script>
+  <script src="suggestionStore.js"></script>
+
+  <!-- Document Workspace: independent of forms/renderer entirely -->
+  <script src="pdfValidation.js"></script>
+  <script src="documentStore.js"></script>
+  <script src="documentUpload.js"></script>
+  <script src="documentWorkspace.js"></script>
+
+  <script src="formCatalog.js"></script>
+  <script src="formLoader.js"></script>
+  <script src="formState.js"></script>
+  <script src="sidebar.js"></script>
+
+  <!-- The generic renderer component, unmodified in its rendering logic -->
+  <script src="../renderer/form-renderer.js"></script>
+
+  <script src="mainArea.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

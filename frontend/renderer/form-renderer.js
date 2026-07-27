@@ -1,26 +1,57 @@
 /*
- * Generic, definition-driven form renderer (V1).
+ * Generic, definition-driven form renderer.
  *
  * Renders an editable form from a Form Definition JSON that validates against
  * docs/specifications/schema/form-definition.schema.json. It contains NO
- * form-specific content: everything it draws comes from the definition.
+ * form-specific content: everything it draws comes from the definition object
+ * it is given. It never fetches a definition itself and never knows which
+ * form (formId/formNumber) it is rendering.
  *
- * Design rule for this proof: if the renderer needs information the definition
- * does not supply, it records the gap in `gaps[]` (surfaced in the completeness
- * panel) instead of inventing it. An empty gap list is the proof of completeness.
+ * Public API (attached to window.FormRenderer):
+ *
+ *   FormRenderer.mount(container, definition, initialValues, callbacks) -> controller
+ *
+ *     container      DOM element to render into (cleared first).
+ *     definition     A Form Definition object (already parsed JSON).
+ *     initialValues  Plain object of previously saved field values, or null/{}.
+ *     callbacks      Optional: {
+ *                       onChange(values)        // fired after every user edit
+ *                       onGapsChange(gaps, findings) // fired after every render;
+ *                                                     // seam for a future Validation feature
+ *                     }
+ *
+ *   controller = {
+ *     getValues()        -> plain-object snapshot of current field values
+ *     setValues(values)  -> replace all values and re-render (e.g. "restore draft")
+ *     getGaps()          -> missing-information gaps found while rendering
+ *     getFindings()       -> non-blocking fidelity notes found while rendering
+ *     unmount()          -> remove the rendered DOM from `container`
+ *   }
+ *
+ * Only one form is ever mounted at a time by this application, so internal
+ * state is a module-level singleton that `mount()` fully resets on every call
+ * (definition, values, callbacks, computed condition triggers). This is the
+ * smallest change that lets the host application own the form's editor state
+ * (per the "do not let the renderer own the application" requirement) without
+ * restructuring the rendering logic itself, which is unchanged from the
+ * approved proof-of-architecture version.
+ *
+ * Design rule carried over from the proof phase: if the renderer needs
+ * information the definition does not supply, it records the gap in `gaps[]`
+ * instead of inventing it.
  */
 (function () {
   "use strict";
 
-  var DEF_PATH =
-    new URLSearchParams(location.search).get("def") ||
-    "/docs/specifications/definitions/form_03.definition.json";
-
   var DEF = null;
+  var callbacks = {};
   var state = {}; // path -> value (string | array<string> | array<rowObject> | dataURL)
   var gaps = []; // blocking: information the renderer required but the definition lacked
   var findings = []; // informational: fidelity notes that did not block rendering
   var triggerPaths = new Set(); // field paths referenced by any condition (drive re-render)
+
+  var appEl = null; // container for the rendered form (element with class "app")
+  var completenessEl = null; // container for the completeness/gaps panel
 
   // ------------------------------------------------------------------ helpers
   function el(tag, cls, text) {
@@ -30,7 +61,11 @@
     return n;
   }
   function getVal(path) { return state[path]; }
-  function setVal(path, v) { state[path] = v; }
+  function snapshot() { return JSON.parse(JSON.stringify(state)); }
+  function notify() {
+    if (callbacks && typeof callbacks.onChange === "function") callbacks.onChange(snapshot());
+  }
+  function setVal(path, v) { state[path] = v; notify(); }
 
   function isFilledVal(v) {
     if (v == null) return false;
@@ -69,7 +104,7 @@
         return true;
     }
   }
-  function isVisible(f, base) {
+  function isVisible(f) {
     return !f.visibleWhen || evalCond(f.visibleWhen);
   }
   function isRequired(f) {
@@ -220,7 +255,7 @@
     var min = minCount(f.repeatable);
     if (!Array.isArray(getVal(path))) {
       var start = Math.max(min, 1); // ensure at least one editable instance
-      setVal(path, Array.from({ length: start }, function () { return ""; }));
+      state[path] = Array.from({ length: start }, function () { return ""; });
     }
     var arr = getVal(path);
     var container = el(inline ? "span" : "div", inline ? "inline-field" : "field");
@@ -230,7 +265,6 @@
     arr.forEach(function (_, idx) {
       var row = el(inline ? "span" : "div", inline ? "inline-field" : "repeat-item");
       var ctl = scalarControl(f, path, inline, idx, path);
-      // unwrap inline-field so we don't double-caption inside repeat
       row.appendChild(ctl);
       var del = el("button", "btn del", "−");
       del.type = "button";
@@ -388,7 +422,7 @@
     var instances = f.repeatable ? Math.max(minCount(f.repeatable), 1) : 1;
     // Track instance count in state for repeatable groups
     if (f.repeatable) {
-      if (typeof getVal(path + "#count") !== "number") setVal(path + "#count", instances);
+      if (typeof getVal(path + "#count") !== "number") state[path + "#count"] = instances;
       instances = getVal(path + "#count");
     }
     for (var i = 0; i < instances; i++) {
@@ -412,7 +446,7 @@
     var min = minCount(f.repeatable);
     if (!Array.isArray(getVal(path))) {
       var start = Math.max(min, 1);
-      setVal(path, Array.from({ length: start }, function () { return {}; }));
+      state[path] = Array.from({ length: start }, function () { return {}; });
     }
     var rows = getVal(path);
 
@@ -499,13 +533,13 @@
           var g = fields[j];
           var ggrp = g.presentation && g.presentation.group;
           if (ggrp !== grp) break;
-          if (isVisible(g, base)) run.appendChild(renderField(g, base));
+          if (isVisible(g)) run.appendChild(renderField(g, base));
           j++;
         }
         if (run.childNodes.length) frag.appendChild(run);
         i = j;
       } else {
-        if (isVisible(f, base)) frag.appendChild(renderField(f, base));
+        if (isVisible(f)) frag.appendChild(renderField(f, base));
         i++;
       }
     }
@@ -555,34 +589,35 @@
   function render() {
     gaps = [];
     findings = [];
-    var app = document.getElementById("app");
-    app.innerHTML = "";
-    app.appendChild(renderHeader(DEF));
+    appEl.innerHTML = "";
+    appEl.appendChild(renderHeader(DEF));
     (DEF.sections || []).forEach(function (s) {
       if (s.visibleWhen && !evalCond(s.visibleWhen)) return;
-      app.appendChild(renderSection(s));
+      appEl.appendChild(renderSection(s));
     });
-    if (DEF.notes && DEF.notes.length) app.appendChild(renderNotes(DEF.notes));
+    if (DEF.notes && DEF.notes.length) appEl.appendChild(renderNotes(DEF.notes));
     renderCompleteness();
+    if (callbacks && typeof callbacks.onGapsChange === "function") {
+      callbacks.onGapsChange(gaps.slice(), findings.slice());
+    }
   }
 
   function renderCompleteness() {
-    var panel = document.getElementById("completeness");
-    panel.innerHTML = "";
+    completenessEl.innerHTML = "";
     var uniqueGaps = Array.from(new Set(gaps));
     var uniqueFindings = Array.from(new Set(findings));
     if (uniqueGaps.length === 0) {
-      panel.className = "completeness ok";
-      panel.appendChild(el("h2", null, "✓ Definition is complete"));
-      panel.appendChild(el("div", null,
-        "The renderer built the entire Form 3 editor from form_03.definition.json alone — no required information was missing, nothing was invented."));
+      completenessEl.className = "completeness ok";
+      completenessEl.appendChild(el("h2", null, "✓ Definition is complete"));
+      completenessEl.appendChild(el("div", null,
+        "The renderer built this entire form editor from its JSON definition alone — no required information was missing, nothing was invented."));
     } else {
-      panel.className = "completeness gaps";
-      panel.appendChild(el("h2", null, "⚠ Missing information (" + uniqueGaps.length + ")"));
-      panel.appendChild(el("div", null, "The renderer needed the following but the definition did not supply it:"));
+      completenessEl.className = "completeness gaps";
+      completenessEl.appendChild(el("h2", null, "⚠ Missing information (" + uniqueGaps.length + ")"));
+      completenessEl.appendChild(el("div", null, "The renderer needed the following but the definition did not supply it:"));
       var ul = el("ul");
       uniqueGaps.forEach(function (g) { ul.appendChild(el("li", null, g)); });
-      panel.appendChild(ul);
+      completenessEl.appendChild(ul);
     }
     if (uniqueFindings.length) {
       var fWrap = el("div", "findings");
@@ -590,25 +625,41 @@
       var ul2 = el("ul");
       uniqueFindings.forEach(function (x) { ul2.appendChild(el("li", null, x)); });
       fWrap.appendChild(ul2);
-      panel.appendChild(fWrap);
+      completenessEl.appendChild(fWrap);
     }
   }
 
-  // ------------------------------------------------------------------- boot
-  function boot() {
-    document.getElementById("def-path").textContent = DEF_PATH;
-    fetch(DEF_PATH)
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
-      .then(function (def) {
-        DEF = def;
-        triggerPaths = collectTriggers(def);
-        render();
-      })
-      .catch(function (e) {
-        document.getElementById("app").textContent = "Failed to load definition (" + DEF_PATH + "): " + e.message;
-      });
+  // ------------------------------------------------------------------- mount
+  function mount(container, definition, initialValues, cbs) {
+    if (!container) throw new Error("FormRenderer.mount requires a container element.");
+    if (!definition) throw new Error("FormRenderer.mount requires a form definition object.");
+
+    DEF = definition;
+    callbacks = cbs || {};
+    state = initialValues ? JSON.parse(JSON.stringify(initialValues)) : {};
+    gaps = [];
+    findings = [];
+    triggerPaths = collectTriggers(DEF);
+
+    container.innerHTML = "";
+    completenessEl = el("section", "completeness");
+    appEl = el("main", "app");
+    container.appendChild(completenessEl);
+    container.appendChild(appEl);
+
+    render();
+
+    return {
+      getValues: function () { return snapshot(); },
+      setValues: function (values) { state = values ? JSON.parse(JSON.stringify(values)) : {}; render(); },
+      getGaps: function () { return gaps.slice(); },
+      getFindings: function () { return findings.slice(); },
+      unmount: function () {
+        container.innerHTML = "";
+        DEF = null; state = {}; appEl = null; completenessEl = null;
+      }
+    };
   }
 
-  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
-  else boot();
+  window.FormRenderer = { mount: mount };
 })();
