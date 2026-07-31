@@ -37,17 +37,23 @@ window.PatentFormsApp = window.PatentFormsApp || {};
         var meta = ns.formCatalog.FORMS.filter(function (f) { return f.formId === formId; })[0];
         mainArea.showLoading(meta);
 
+        // Suggestions are scoped to a workspace: only documents belonging to
+        // this patent matter may contribute. Until the UI offers a workspace
+        // picker there is exactly one, taken from documentStore so upload and
+        // retrieval cannot disagree about its name.
+        var workspaceId = ns.documentStore.DEFAULT_WORKSPACE;
+
         // Fetch definition and suggestions in parallel.
         // getSuggestions always resolves (graceful on backend-offline).
         // loadDefinition may reject (form definition file not found).
         Promise.all([
           ns.formLoader.loadDefinition(formId),
-          ns.extractionClient.getSuggestions(formId),
+          ns.extractionClient.getSuggestions(formId, workspaceId),
         ]).then(function (results) {
           var definition = results[0];
           var suggestionResult = results[1];
           var suggestions = suggestionResult.suggestions || {};
-          ns.suggestionStore.setSuggestions(formId, suggestions);
+          ns.suggestionStore.setSuggestions(formId, suggestions, workspaceId);
           mainArea.showForm(definition, formId, suggestions);
         }).catch(function (error) {
           mainArea.showUnavailable(meta, error);

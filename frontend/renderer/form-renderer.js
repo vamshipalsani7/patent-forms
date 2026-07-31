@@ -494,8 +494,10 @@
     var cell = col.cell || {};
     var rows = getVal(tablePath);
     var input;
+    var isCheckbox = cell.kind === "checkbox";
     if (cell.kind === "date") { input = el("input"); input.type = "date"; }
     else if (cell.kind === "number") { input = el("input"); input.type = "number"; }
+    else if (isCheckbox) { input = el("input"); input.type = "checkbox"; }
     else if (cell.kind === "textarea") { input = el("textarea"); }
     else if (cell.kind === "dropdown" || cell.kind === "radio" || cell.kind === "strikeoutChoice") {
       if (!cell.options) { gaps.push("table '" + tablePath + "' column '" + col.id + "' is kind '" + cell.kind + "' but has no options."); }
@@ -506,12 +508,15 @@
     else { input = el("input"); input.type = "text"; }
 
     var v = rows[rIdx] ? rows[rIdx][col.id] : "";
-    input.value = v == null ? "" : v;
+    // A checkbox carries its state in `checked`, not `value`; mirror the boolean
+    // storage used by the standalone checkboxControl so both round-trip alike.
+    if (isCheckbox) { input.checked = v === true || v === "true"; }
+    else { input.value = v == null ? "" : v; }
     if (cell.format) input.title = cell.format;
-    var evt = (input.tagName === "SELECT") ? "change" : "input";
+    var evt = (input.tagName === "SELECT" || isCheckbox) ? "change" : "input";
     input.addEventListener(evt, function () {
       if (!rows[rIdx]) rows[rIdx] = {};
-      rows[rIdx][col.id] = input.value;
+      rows[rIdx][col.id] = isCheckbox ? input.checked : input.value;
       setVal(tablePath, rows);
     });
     return input;

@@ -1,0 +1,220 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_23",
+  "formNumber": "23",
+  "officialName": "Application for the Restoration of the Name in the Register of Patent Agents",
+  "purpose": "Apply for restoration of a former patent agent's name to the register of patent agents after it was removed, referencing the removal and the original entry.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Section 130(2)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 117(1)"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "first_schedule", "note": "For fee: See First Schedule." },
+  "layout": {
+    "columns": 2,
+    "notes": "Short single-purpose form: a single declarative paragraph with inline blanks, then date and signature. The applicant is the patent agent (an individual), not a patent applicant, so autofill from uploaded patent documents does not apply."
+  },
+
+  "sections": [
+    {
+      "id": "restoration_request",
+      "title": "Restoration Request",
+      "description": "Pre-printed: 'I, ...... hereby apply for the restoration of my name in the register of patent agent which was removed on ...... under section 130 or Rule 116. My name was originally entered in the register on ...... under ...... No ......'",
+      "fields": [
+        {
+          "id": "clause_i",
+          "kind": "boilerplate",
+          "text": "I,",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "agent_name",
+          "kind": "text",
+          "label": "Name of the applicant (patent agent)",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter your full name." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form26_authorisation", "key": "agent.name" }],
+            "confidence": "low"
+          },
+          "presentation": { "group": "clause", "multiline": false }
+        },
+        {
+          "id": "clause_apply",
+          "kind": "boilerplate",
+          "text": "hereby apply for the restoration of my name in the register of patent agent which was removed on",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "removal_date",
+          "kind": "date",
+          "label": "Date of removal",
+          "required": true,
+          "validation": { "notFuture": true },
+          "presentation": { "group": "clause", "multiline": false }
+        },
+        {
+          "id": "clause_under",
+          "kind": "boilerplate",
+          "text": "under",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "removal_provision",
+          "kind": "strikeoutChoice",
+          "label": "section 130 / Rule 116",
+          "required": true,
+          "options": [
+            { "value": "section_130", "label": "section 130" },
+            { "value": "rule_116", "label": "Rule 116" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "clause", "multiline": false }
+        },
+        {
+          "id": "clause_originally_entered",
+          "kind": "boilerplate",
+          "text": ". My name was originally entered in the register on",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "original_entry_date",
+          "kind": "date",
+          "label": "Date originally entered in the register",
+          "required": true,
+          "validation": { "notFuture": true },
+          "presentation": { "group": "clause", "multiline": false }
+        },
+        {
+          "id": "clause_under_2",
+          "kind": "boilerplate",
+          "text": "under",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "original_registration_reference",
+          "kind": "text",
+          "label": "Original registration reference (\"under ...\")",
+          "required": true,
+          "validation": { "minLength": 1, "message": "Enter the original registration reference." },
+          "presentation": { "group": "clause", "multiline": false }
+        },
+        {
+          "id": "clause_no",
+          "kind": "boilerplate",
+          "text": "No",
+          "export": { "verbatim": true },
+          "presentation": { "group": "clause" }
+        },
+        {
+          "id": "registration_number",
+          "kind": "text",
+          "label": "Registration No.",
+          "required": true,
+          "helpText": "The agent's IN/PA registration number.",
+          "validation": { "minLength": 1, "message": "Enter the registration number." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form26_authorisation", "key": "agent.inpaNumber" }],
+            "confidence": "low"
+          },
+          "presentation": { "group": "clause", "multiline": false }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the applicant.",
+      "fields": [
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "signature",
+          "kind": "signature",
+          "label": "Signature",
+          "required": true,
+          "helpText": "Signed by the applicant (the agent) personally."
+        }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the natural person who has signed.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "Note. - For fee: See First Schedule.",
+    "This is not a patent-applicant form: it relates to the register of patent agents, so autofill from uploaded patent documents does not apply (a stored agent profile may be reused).",
+    "The form requires both the removal details (date and provision) and the original entry details (date, reference and registration number)."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_23.PDF",
+    "transcribedFrom": "docs/specifications/form_23.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 23",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "APPLICATION FOR THE RESTORATION OF THE NAME IN THE REGISTER OF PATENT AGENTS",
+      "citation": "(See section 130(2) and rule 117(1))"
+    }
+  }
+}

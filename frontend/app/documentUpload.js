@@ -16,7 +16,6 @@ window.PatentFormsApp = window.PatentFormsApp || {};
 
   var isPdf = ns.pdfValidation.isPdf;
   var store = ns.documentStore;
-  var DEFAULT_WORKSPACE = "default";
 
   function makeId() {
     return "doc_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 8);
@@ -41,7 +40,7 @@ window.PatentFormsApp = window.PatentFormsApp || {};
         displayTitle: file.name,
         size: file.size,
         uploadedAt: new Date().toISOString(),
-        workspaceId: DEFAULT_WORKSPACE,
+        workspaceId: store.DEFAULT_WORKSPACE,
       };
       store.add(meta);
       accepted.push(meta);
@@ -49,8 +48,9 @@ window.PatentFormsApp = window.PatentFormsApp || {};
       // Fire-and-forget: send bytes to backend for extraction.
       // The File object is available only here (synchronous ingest loop) —
       // localStorage cannot hold bytes, so we ship them immediately.
-      // Failure is silent; the form remains fully usable with no suggestions.
-      ns.extractionClient.uploadForExtraction(meta.id, file)
+      // The workspace travels with the document: the backend files it there
+      // and nowhere else. Failure is silent; the form remains fully usable.
+      ns.extractionClient.uploadForExtraction(meta.id, file, meta.workspaceId)
         .then(function (result) {
           if (result && !result.error) {
             console.info("[upload] extraction complete:", meta.id, "→", result.source_type, "(" + (result.facts || []).length + " facts)");

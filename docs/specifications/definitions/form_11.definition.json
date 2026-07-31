@@ -1,0 +1,270 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_11",
+  "formNumber": "11",
+  "officialName": "Application for Direction of the Controller",
+  "purpose": "Apply for a direction of the Controller in respect of a patent (e.g. directions concerning co-ownership / rights of joint patentees), stating the direction sought and the reasons.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Sections 51(1) and 51(2)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rules 76 and 77"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "first_schedule", "note": "For fee: See First Schedule." },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column form: left column carries the numbered instructions; right column carries the running application with inline blanks. Fields sharing a presentation.group belong on the same printed line."
+  },
+
+  "sections": [
+    {
+      "id": "applicant",
+      "title": "1. Name in full, address and nationality of the applicant(s).",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single applicant, 'We' for multiple, from the applicant count in uploaded documents.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "applicant_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality of the applicant(s)",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Applicant" },
+          "helpText": "Name in full (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the applicant's name, address and nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "patent_certificate", "key": "patentee.name" }
+            ],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        }
+      ]
+    },
+
+    {
+      "id": "direction",
+      "title": "2. Direction sought",
+      "description": "Pre-printed: 'hereby apply for the following direction in respect of patent No. ... dated ... granted to ...'",
+      "fields": [
+        {
+          "id": "direction_intro",
+          "kind": "boilerplate",
+          "text": "hereby apply for the following direction in respect of patent No.",
+          "export": { "verbatim": true },
+          "presentation": { "group": "patent" }
+        },
+        {
+          "id": "patent_number",
+          "kind": "text",
+          "label": "Patent No.",
+          "format": "patentNumber",
+          "required": true,
+          "validation": {
+            "pattern": "^[A-Za-z0-9/-]{1,20}$",
+            "patternMessage": "Enter the patent number."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patent.number" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "patent", "multiline": false }
+        },
+        {
+          "id": "patent_dated",
+          "kind": "boilerplate",
+          "text": "dated",
+          "export": { "verbatim": true },
+          "presentation": { "group": "patent" }
+        },
+        {
+          "id": "patent_date",
+          "kind": "date",
+          "label": "Date of the patent",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patent.grantDate" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "patent", "multiline": false }
+        },
+        {
+          "id": "patent_granted_to",
+          "kind": "boilerplate",
+          "text": "granted to",
+          "export": { "verbatim": true },
+          "presentation": { "group": "patent" }
+        },
+        {
+          "id": "granted_to",
+          "kind": "textarea",
+          "label": "Granted to",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the patentee(s) to whom the patent was granted." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patentee.name" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "patent", "multiline": true }
+        },
+        {
+          "id": "direction_applied_for",
+          "kind": "textarea",
+          "label": "Direction applied for",
+          "required": true,
+          "validation": { "minLength": 1, "message": "State the direction applied for." }
+        }
+      ]
+    },
+
+    {
+      "id": "reasons",
+      "title": "3. Reasons",
+      "fields": [
+        {
+          "id": "reasons",
+          "kind": "textarea",
+          "label": "Reasons for making this application",
+          "required": true,
+          "validation": { "minLength": 1, "message": "State the reasons for the application." }
+        }
+      ]
+    },
+
+    {
+      "id": "address_for_service",
+      "title": "4. Address for service in India",
+      "fields": [
+        {
+          "id": "address_for_service",
+          "kind": "textarea",
+          "label": "Address for service in India",
+          "format": "address",
+          "required": true,
+          "helpText": "Must be an address in India. Include postal index no./code, state, and telephone and fax number(s).",
+          "validation": { "minLength": 2, "message": "Enter an address for service in India." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.address" }],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the applicant(s) or his authorised registered patent agent.",
+      "fields": [
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        },
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the natural person who has signed.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the applicant's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "Note. - For fee: See First Schedule.",
+    "Note. - Strike out whichever is not applicable.",
+    "Section 51 concerns the Controller's directions to co-owners of a patent; the 'direction applied for' free text captures the specific relief sought."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_11.PDF",
+    "transcribedFrom": "docs/specifications/form_11.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 11",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "APPLICATION FOR DIRECTION OF THE CONTROLLER",
+      "citation": "(See sections 51(1) and 51(2) and rules 76 and 77)"
+    }
+  }
+}

@@ -20,7 +20,7 @@ from __future__ import annotations
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from models.document_extract import DocumentExtract
 from models.fact import Fact
@@ -52,14 +52,39 @@ class SourceDocument(BaseModel):
 
 
 class PatentProfile(BaseModel):
-    """Merged projection across all DocumentExtracts in a workspace.
+    """Merged projection across all DocumentExtracts in ONE workspace.
 
     `extracts` is the canonical source of data.
     `get_facts()` is the only query interface the autofill mapper uses.
     `fields` is a computed backward-compat dict (highest-confidence per key).
+
+    When `workspace_id` is set, the profile refuses to hold an extract from any
+    other workspace. This is the last line of defence behind the content store:
+    even a profile assembled by hand from a mixed list of extracts fails loudly
+    instead of silently producing cross-matter suggestions.
     """
 
+    workspace_id: Optional[str] = None
+    """The workspace this profile answers for. None means unscoped, which is
+    only appropriate for tests and ad-hoc analysis — never for the API."""
+
     extracts: List[DocumentExtract] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def _reject_extracts_from_other_workspaces(self) -> "PatentProfile":
+        if self.workspace_id is None:
+            return self
+        foreign = {
+            e.document_id: e.workspace_id
+            for e in self.extracts
+            if e.workspace_id != self.workspace_id
+        }
+        if foreign:
+            raise ValueError(
+                f"PatentProfile for workspace '{self.workspace_id}' was given extracts "
+                f"belonging to other workspaces: {foreign}"
+            )
+        return self
 
     @property
     def fields(self) -> Dict[str, Any]:
@@ -93,6 +118,15 @@ class PatentProfile(BaseModel):
         return sorted(facts, key=lambda f: -f.confidence)
 
     def add_extract(self, extract: DocumentExtract) -> None:
-        """Add a DocumentExtract to this profile (replace if same document_id)."""
+        """Add a DocumentExtract to this profile (replace if same document_id).
+
+        Raises:
+            ValueError: if the extract belongs to a different workspace.
+        """
+        if self.workspace_id is not None and extract.workspace_id != self.workspace_id:
+            raise ValueError(
+                f"cannot add document '{extract.document_id}' from workspace "
+                f"'{extract.workspace_id}' to a profile for workspace '{self.workspace_id}'"
+            )
         self.extracts = [e for e in self.extracts if e.document_id != extract.document_id]
         self.extracts.append(extract)

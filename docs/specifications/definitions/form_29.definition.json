@@ -1,0 +1,294 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_29",
+  "formNumber": "29",
+  "officialName": "Request for Withdrawal of the Application for Patent",
+  "purpose": "Request that a patent application (and, if applicable, its associated request for examination / expedited examination) be treated as withdrawn.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Section 11B(4)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rules 7(4A) and 26"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "none", "note": "No fee note is printed on the face of Form 29." },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column table with three numbered rows. Row 1's right column is a single running withdrawal sentence with inline blanks; fields sharing a presentation.group belong on the same printed line."
+  },
+
+  "sections": [
+    {
+      "id": "withdrawal_request",
+      "title": "1. Name of the applicant",
+      "description": "Row 1 right column: 'I/We ... request that the application for patent numbered ... dated ... filed by me/us, if applicable, having the request for examination / request for expedited examination numbered ... dated ..., be treated as withdrawn under rule 7(4A) / 26.'",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single applicant, 'We' for multiple, from the applicant count in uploaded documents.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "applicant_names",
+          "kind": "textarea",
+          "label": "Name of the applicant",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Applicant" },
+          "validation": { "minLength": 2, "message": "Enter the applicant's name." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "form2_specification", "key": "applicant.name" }
+            ],
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        },
+        {
+          "id": "request_intro",
+          "kind": "boilerplate",
+          "text": "request that the application for patent numbered",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "application_number",
+          "kind": "text",
+          "label": "Application for patent numbered",
+          "format": "applicationNumber",
+          "required": true,
+          "validation": {
+            "pattern": "^([0-9]{11,12}|[0-9]{1,6}/[A-Za-z]{2,5}/[0-9]{4})$",
+            "patternMessage": "Expected an IPO application number, e.g. 202211012345 or 1234/DEL/2015."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.number" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_dated",
+          "kind": "boilerplate",
+          "text": "dated",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "application_date",
+          "kind": "date",
+          "label": "Date of the application",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.filingDate" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_filed_by",
+          "kind": "boilerplate",
+          "text": "filed by",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "me_us",
+          "kind": "strikeoutChoice",
+          "label": "me / us",
+          "options": [
+            { "value": "me", "label": "me" },
+            { "value": "us", "label": "us" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_if_applicable",
+          "kind": "boilerplate",
+          "text": ", if applicable, having the request for",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "examination_type",
+          "kind": "strikeoutChoice",
+          "label": "examination / expedited examination",
+          "options": [
+            { "value": "examination", "label": "examination" },
+            { "value": "expedited", "label": "expedited examination" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_numbered",
+          "kind": "boilerplate",
+          "text": "numbered",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "rq_number",
+          "kind": "text",
+          "label": "Request for examination number (if applicable)",
+          "required": false,
+          "helpText": "The RQ number of the associated request for examination / expedited examination, if one was filed.",
+          "validation": { "minLength": 1, "message": "Enter the request-for-examination number." },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_rq_dated",
+          "kind": "boilerplate",
+          "text": "dated",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "rq_date",
+          "kind": "date",
+          "label": "Date of the request for examination (if applicable)",
+          "required": false,
+          "validation": { "notFuture": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_be_withdrawn",
+          "kind": "boilerplate",
+          "text": ", be treated as withdrawn under",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "withdrawal_rule",
+          "kind": "strikeoutChoice",
+          "label": "rule 7(4A) / rule 26",
+          "required": true,
+          "options": [
+            { "value": "rule_7_4a", "label": "rule 7(4A)" },
+            { "value": "rule_26", "label": "rule 26" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "request_fullstop",
+          "kind": "boilerplate",
+          "text": ".",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "2. To be signed by the applicant or his authorized registered patent agent",
+      "fields": [
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "3. Name of the natural person who has signed",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        },
+        { "id": "designation", "kind": "text", "label": "Designation", "required": false }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nPatent Office at",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the applicant's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "N.B. - Strike out whichever is not applicable (I/We, me/us, examination / expedited examination, rule 7(4A) / 26).",
+    "Withdrawal is a consequential, largely irreversible step; the UI should confirm clearly what is being withdrawn (the application and, optionally, the examination request).",
+    "The RQ number and its date are completed only if a request for examination / expedited examination was filed."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_29.PDF",
+    "transcribedFrom": "docs/specifications/form_29.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 29",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "REQUEST FOR WITHDRAWAL OF THE APPLICATION FOR PATENT",
+      "citation": "(See section 11B(4) and rules 7(4A) and 26)"
+    }
+  }
+}

@@ -11,14 +11,16 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   var BACKEND_URL = "http://localhost:8000";
 
   /**
-   * Upload a PDF file for extraction.
-   * @param {string} documentId  — the id stored in documentStore
-   * @param {File}   file        — the raw File object from drag/drop
+   * Upload a PDF file for extraction into one workspace.
+   * @param {string} documentId   — the id stored in documentStore
+   * @param {File}   file         — the raw File object from drag/drop
+   * @param {string} workspaceId  — the patent matter this document belongs to
    * @returns {Promise<object|null>}  DocumentExtract JSON, or null on failure
    */
-  function uploadForExtraction(documentId, file) {
+  function uploadForExtraction(documentId, file, workspaceId) {
     var body = new FormData();
     body.append("document_id", documentId);
+    body.append("workspace_id", workspaceId);
     body.append("file", file);
 
     return fetch(BACKEND_URL + "/api/extract", { method: "POST", body: body })
@@ -37,23 +39,28 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   }
 
   /**
-   * Fetch autofill suggestions for a form from the backend.
-   * @param {string} formId  — e.g. 'form_03'
-   * @returns {Promise<object>}  { form_id, suggestions: { fieldPath: { value, fact } } }
+   * Fetch autofill suggestions for a form, scoped to one workspace.
+   * @param {string} formId       — e.g. 'form_03'
+   * @param {string} workspaceId  — only this workspace's documents are consulted
+   * @returns {Promise<object>}  { form_id, workspace_id, suggestions: {...} }
    *                             Always resolves (empty suggestions on failure).
    */
-  function getSuggestions(formId) {
-    return fetch(BACKEND_URL + "/api/suggestions/" + formId)
+  function getSuggestions(formId, workspaceId) {
+    var url = BACKEND_URL + "/api/suggestions/" + encodeURIComponent(formId) +
+      "?workspace_id=" + encodeURIComponent(workspaceId);
+    var empty = { form_id: formId, workspace_id: workspaceId, suggestions: {} };
+
+    return fetch(url)
       .then(function (res) {
         if (!res.ok) {
           console.warn("[extraction] GET /api/suggestions/" + formId + " returned " + res.status);
-          return { form_id: formId, suggestions: {} };
+          return empty;
         }
         return res.json();
       })
       .catch(function (err) {
         console.warn("[extraction] getSuggestions failed:", err.message);
-        return { form_id: formId, suggestions: {} };
+        return empty;
       });
   }
 

@@ -1,0 +1,254 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_28",
+  "formNumber": "28",
+  "officialName": "To Be Submitted by a Small Entity / Startup / Educational Institution",
+  "purpose": "Declare and prove status as a small entity, a startup, or an educational institution — the status that determines reduced official fees.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rules 2(fa), 2(fb), 2(ca) and 7"]
+  },
+  "pageCount": 1,
+  "fee": {
+    "model": "none",
+    "note": "No fee is printed on the face of Form 28; the form establishes the fee-reduced status applied to the related application/patent."
+  },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column table with four numbered rows. Form 28 prints NO 'To, The Controller ... at' addressee — it is filed with/attached to the related application. Section 2 is a static reference of the evidence required per status (reproduced as boilerplate, with the proof document declared as a required attachment)."
+  },
+
+  "sections": [
+    {
+      "id": "declarant",
+      "title": "1. Name, address and nationality of the applicant/patentee and status claimed",
+      "description": "Pre-printed: 'I/We ... applicant/patentee in respect of the patent application no ... or patent no ... hereby declare that I/we am/are a small entity in accordance with rule 2(fa) or a startup in accordance with rule 2(fb) or an educational institution in accordance with rule 2(ca) and submit the following document(s) as proof:'",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single declarant, 'We' for multiple.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "declarant_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality of the applicant/patentee",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Declarant" },
+          "helpText": "Full name (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the declarant's name, address and nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "patent_certificate", "key": "patentee.name" }
+            ],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        },
+        {
+          "id": "capacity",
+          "kind": "strikeoutChoice",
+          "label": "applicant / patentee",
+          "required": true,
+          "options": [
+            { "value": "applicant", "label": "applicant" },
+            { "value": "patentee", "label": "patentee" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "in_respect_of",
+          "kind": "boilerplate",
+          "text": "in respect of the",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "application_or_patent",
+          "kind": "strikeoutChoice",
+          "label": "application no / patent no",
+          "required": true,
+          "options": [
+            { "value": "application", "label": "patent application no" },
+            { "value": "patent", "label": "patent no" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "application_patent_number",
+          "kind": "text",
+          "label": "Patent application no. / Patent no.",
+          "required": true,
+          "validation": {
+            "pattern": "^[A-Za-z0-9/-]{3,20}$",
+            "patternMessage": "Enter the application or patent number."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "application.number" },
+              { "sourceType": "patent_certificate", "key": "patent.number" }
+            ],
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "hereby_declare",
+          "kind": "boilerplate",
+          "text": "hereby declare that I/we",
+          "export": { "verbatim": true },
+          "presentation": { "group": "row1" }
+        },
+        {
+          "id": "am_are",
+          "kind": "strikeoutChoice",
+          "label": "am / are",
+          "options": [
+            { "value": "am", "label": "am" },
+            { "value": "are", "label": "are" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "status_claimed",
+          "kind": "radio",
+          "label": "Status claimed",
+          "description": "Retain the applicable status (the printed clause offers all three as alternatives).",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "small_entity", "label": "a small entity in accordance with rule 2(fa)" },
+            { "value": "startup", "label": "a startup in accordance with rule 2(fb)" },
+            { "value": "educational_institution", "label": "an educational institution in accordance with rule 2(ca)" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Suggest from the applicant category recorded on Form 1 §3B (small entity / startup / educational institution); the user confirms.",
+            "confidence": "low"
+          }
+        },
+        {
+          "id": "submit_proof",
+          "kind": "boilerplate",
+          "text": "and submit the following document(s) as proof:",
+          "export": { "verbatim": true }
+        }
+      ]
+    },
+
+    {
+      "id": "documents",
+      "title": "2. Documents to be submitted",
+      "description": "Static reference of the evidence required per claimed status. Reproduced verbatim; the applicable proof document is declared as a required attachment (see attachments).",
+      "fields": [
+        {
+          "id": "evidence_reference",
+          "kind": "boilerplate",
+          "text": "(i) Small entity: (Indian applicant) evidence of registration under the Micro, Small and Medium Enterprises Development Act, 2006 (27 of 2006); (foreign entity) any other document.\n(ii) Startup: any document as evidence of eligibility, as defined in rule 2(fb); (foreign entity) any other document.\n(iii) Educational institution: any document as evidence of eligibility, as defined in rule 2(ca); (foreign educational institution) any other document.",
+          "export": { "verbatim": true }
+        }
+      ]
+    },
+
+    {
+      "id": "declaration",
+      "title": "3. Declaration",
+      "fields": [
+        {
+          "id": "declaration_truth",
+          "kind": "boilerplate",
+          "text": "The information provided herein is correct to the best of my/our knowledge and belief.",
+          "export": { "verbatim": true }
+        },
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the applicant(s)/patentee(s)/authorized registered patent agent.",
+      "fields": [
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "4. Name of the natural person who has signed",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        }
+      ]
+    }
+  ],
+
+  "attachments": [
+    {
+      "id": "status_evidence",
+      "label": "Evidence of the claimed status (small entity / startup / educational institution) per the reference in Section 2",
+      "required": true,
+      "note": "The proof document must match the claimed status and whether the applicant is Indian or a foreign entity."
+    }
+  ],
+
+  "notes": [
+    "Note. - Strike out whichever is not applicable (applicant/patentee, am/are, patent application no/patent no, and the status clause — retain only the claimed status).",
+    "Form 28 prints no addressee block; it is filed with/attached to the related application.",
+    "The claimed status should be consistent with Form 1 §3B (category of applicant)."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_28.PDF",
+    "transcribedFrom": "docs/specifications/form_28.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 28",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "TO BE SUBMITTED BY A SMALL ENTITY / STARTUP / EDUCATIONAL INSTITUTION",
+      "citation": "(See rules 2(fa), 2(fb), 2(ca) and 7)"
+    }
+  }
+}

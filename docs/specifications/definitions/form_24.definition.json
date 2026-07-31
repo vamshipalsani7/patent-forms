@@ -1,0 +1,260 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_24",
+  "formNumber": "24",
+  "officialName": "Application for Review / Setting Aside Controller's Decision / Order",
+  "purpose": "Apply for review or setting aside of a decision or order of the Controller, with the grounds set out in an accompanying statement submitted in duplicate.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Sections 77(1)(f) and 77(1)(g)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rules 130(1) and 130(2)"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "first_schedule", "note": "For fee: See First Schedule." },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column form: left column carries the numbered instructions (1-4); right column carries the running application with inline blanks and superscript markers."
+  },
+
+  "sections": [
+    {
+      "id": "matter",
+      "title": "In the Matter Of",
+      "description": "Instruction 1: the number of the patent or patent application, and the relevant proceeding.",
+      "fields": [
+        {
+          "id": "in_the_matter_of",
+          "kind": "textarea",
+          "label": "In the matter of",
+          "required": true,
+          "helpText": "State the number of the patent or patent application, and the relevant proceeding to which this application relates.",
+          "validation": { "minLength": 2, "message": "State the patent/application number and the relevant proceeding." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "patent_certificate", "key": "patent.number" },
+              { "sourceType": "form1", "key": "application.number" }
+            ],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "applicant_request",
+      "title": "Applicant Particulars and Request",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single party, 'We' for multiple, from the party count in uploaded documents.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "applicant_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Party" },
+          "helpText": "Full name (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the party's name, address and nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "patent_certificate", "key": "patentee.name" }
+            ],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        },
+        {
+          "id": "capacity",
+          "kind": "strikeoutChoice",
+          "label": "being the applicant(s)/opponent/party in the above matter",
+          "required": true,
+          "options": [
+            { "value": "applicant", "label": "applicant(s)" },
+            { "value": "opponent", "label": "opponent" },
+            { "value": "party", "label": "party" }
+          ],
+          "export": { "strikeoutUnselected": true }
+        },
+        {
+          "id": "relief_intro",
+          "kind": "boilerplate",
+          "text": "hereby apply for the",
+          "export": { "verbatim": true },
+          "presentation": { "group": "relief" }
+        },
+        {
+          "id": "relief_sought",
+          "kind": "strikeoutChoice",
+          "label": "review / setting aside",
+          "required": true,
+          "options": [
+            { "value": "review", "label": "review" },
+            { "value": "setting_aside", "label": "setting aside" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "relief", "multiline": false }
+        },
+        {
+          "id": "relief_of_the",
+          "kind": "boilerplate",
+          "text": "of the Controller's",
+          "export": { "verbatim": true },
+          "presentation": { "group": "relief" }
+        },
+        {
+          "id": "decision_or_order",
+          "kind": "strikeoutChoice",
+          "label": "decision / order",
+          "required": true,
+          "options": [
+            { "value": "decision", "label": "decision" },
+            { "value": "order", "label": "order" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "relief", "multiline": false }
+        },
+        {
+          "id": "relief_dated_the",
+          "kind": "boilerplate",
+          "text": "dated the",
+          "export": { "verbatim": true },
+          "presentation": { "group": "relief" }
+        },
+        {
+          "id": "decision_order_date",
+          "kind": "date",
+          "label": "Controller's decision/order date",
+          "required": true,
+          "validation": { "notFuture": true },
+          "presentation": { "group": "relief", "multiline": false }
+        },
+        {
+          "id": "grounds_reference",
+          "kind": "boilerplate",
+          "text": "The grounds for making the application are set forth in the accompanying statement submitted in duplicate.",
+          "export": { "verbatim": true }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the applicant(s) or his authorized registered patent agent.",
+      "fields": [
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        },
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the natural person who has signed.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the applicant's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "attachments": [
+    {
+      "id": "grounds_statement",
+      "label": "Statement of the grounds for the review/setting aside, submitted in duplicate",
+      "required": true,
+      "note": "The grounds are not stated on the form face itself; they are set forth in this accompanying statement."
+    }
+  ],
+
+  "notes": [
+    "Note. - For fee: See First Schedule.",
+    "Note. - Strike out whichever is not applicable (I/We, applicant(s)/opponent/party, review/setting aside, decision/order).",
+    "Review petitions under Rule 130 are time-bound; the UI should surface the applicable deadline."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_24.PDF",
+    "transcribedFrom": "docs/specifications/form_24.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 24",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "APPLICATION FOR REVIEW / SETTING ASIDE CONTROLLER'S DECISION / ORDER",
+      "citation": "(See sections 77(1)(f) and 77(1)(g) and rules 130(1) and 130(2))"
+    }
+  }
+}

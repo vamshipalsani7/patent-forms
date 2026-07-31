@@ -408,7 +408,7 @@ discipline:
 | # | Risk | Severity | Mitigation |
 |---|---|---|---|
 | R1 | **Silent vocabulary drift** (F1, live today). Typo'd key = field never fills, no error. | High | Registry + linter in CI. **Phase 0** — before more definitions are written. |
-| R2 | **Cross-matter contamination.** Flat document list merges unrelated patents into one confidently-wrong profile. | High | `workspaceId` scoping now (§6). One field today; migration + incident later. |
+| R2 | **Cross-matter contamination.** Flat document list merges unrelated patents into one confidently-wrong profile. | High | **Retired.** `workspace_id` is now enforced backend-side: documents are stored per-workspace, `PatentProfile` rejects foreign extracts, and both `/api` endpoints require an explicit workspace. No unscoped bulk read exists. |
 | R3 | **OCR quality** on scanned/photocopied Indian patent documents is genuinely variable. | High | Tier 4 is fallback, not foundation; low confidence surfaced honestly; never auto-fill silently from poor OCR. Set expectations: some documents will not extract, and saying so beats guessing. |
 | R4 | **Wrong-but-confident auto-fill** is worse than no auto-fill — a plausible wrong application number can reach a filed statutory form. | High | Provenance on every suggestion; visible suggested-vs-entered distinction; confidence thresholds below which we suggest nothing. |
 | R5 | **PII capture.** Aadhaar (Form 8A), OTP-verified contacts (Form 1), photo ID (Form 18A). | High | **Do not extract Aadhaar at all** — the user knows their own number; the convenience is negligible and the liability of caching government ID is not. Honour the `sensitive` flags already in the schema; never log values. |

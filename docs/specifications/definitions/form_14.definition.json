@@ -1,0 +1,295 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_14",
+  "formNumber": "14",
+  "officialName": "Notice of Opposition to Amendment / Restoration / Surrender of Patent / Grant of Compulsory Licence or Revision of Terms Thereof or to Correction of Clerical Errors",
+  "purpose": "A single notice-of-opposition form covering six distinct opposition scenarios, selected by the opponent: opposition to an amendment, to restoration, to surrender, to grant of a compulsory licence or revocation, to revision of licence terms, or to correction of a clerical error.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Sections 57(4), 61(1), 63(3), 78(5) and 87(2)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rules 81(3)(b), 85(1), 87(2), 98(1), 101(3) and 124"]
+  },
+  "pageCount": 1,
+  "fee": { "model": "first_schedule", "note": "For fee: See First Schedule." },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column form: left column carries numbered instructions (1-4); right column presents six mutually exclusive opposition types joined by 'OR'. The opponent selects one type; only the selected branch is retained (the rest struck out on export). Option 6 (clerical error) references several numbers/dates, shown conditionally."
+  },
+
+  "sections": [
+    {
+      "id": "opponent",
+      "title": "Opponent Particulars",
+      "description": "Instruction 1: name, address and nationality of the opponent(s).",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single opponent, 'We' for multiple.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "opponent_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality of the opponent(s)",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Opponent" },
+          "helpText": "Full name(s) (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the opponent's name, address and nationality." },
+          "presentation": { "group": "row1", "multiline": true }
+        }
+      ]
+    },
+
+    {
+      "id": "opposition",
+      "title": "Type of Opposition",
+      "description": "Choose one of the six opposition types (joined by 'OR' on the printed form). Only the selected branch is retained; the rest are struck out on export.",
+      "fields": [
+        {
+          "id": "opposition_type",
+          "kind": "radio",
+          "label": "Type of opposition (choose one)",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "amendment", "label": "to the amendment of the application/specification with respect to application for Patent No. ... dated ..." },
+            { "value": "restoration", "label": "to the application for restoration of Patent No. ... dated ..." },
+            { "value": "surrender", "label": "to the offer to surrender the Patent No. ... dated ..." },
+            { "value": "compulsory_licence", "label": "for the grant of compulsory licence, or revocation of Patent No. ... dated ..." },
+            { "value": "revision", "label": "for the revision of the terms and conditions of licence in respect of Patent No. ... dated ..." },
+            { "value": "clerical_error", "label": "for correction of a clerical error in Patent No. ... dated ... / Specification No. ... dated ... in respect of Patent No. ... dated ... or Patent application No. ... dated ..." }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Infer from the underlying proceeding if that document was uploaded; the user confirms.",
+            "confidence": "low"
+          }
+        },
+        {
+          "id": "patent_number",
+          "kind": "text",
+          "label": "Patent No.",
+          "format": "patentNumber",
+          "required": true,
+          "validation": {
+            "pattern": "^[A-Za-z0-9/-]{1,20}$",
+            "patternMessage": "Enter the patent number."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patent.number" }],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "ref", "multiline": false }
+        },
+        {
+          "id": "patent_date",
+          "kind": "date",
+          "label": "Dated (of the patent)",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patent.grantDate" }],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "ref", "multiline": false }
+        },
+        {
+          "id": "specification_number",
+          "kind": "text",
+          "label": "Specification No. (clerical error)",
+          "required": false,
+          "requiredWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "visibleWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "helpText": "For a clerical-error opposition: the specification number in which the error appears.",
+          "validation": { "minLength": 1, "message": "Enter the specification number." }
+        },
+        {
+          "id": "specification_date",
+          "kind": "date",
+          "label": "Specification dated (clerical error)",
+          "required": false,
+          "requiredWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "visibleWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "validation": { "notFuture": true }
+        },
+        {
+          "id": "application_number",
+          "kind": "text",
+          "label": "Patent application No. (clerical error, if applicable)",
+          "required": false,
+          "visibleWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "helpText": "For a clerical-error opposition where the error is in a patent application rather than a granted patent.",
+          "validation": {
+            "pattern": "^([0-9]{11,12}|[0-9]{1,6}/[A-Za-z]{2,5}/[0-9]{4})$",
+            "patternMessage": "Expected an IPO application number, e.g. 202211012345 or 1234/DEL/2015."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.number" }],
+            "confidence": "low"
+          }
+        },
+        {
+          "id": "application_date",
+          "kind": "date",
+          "label": "Patent application dated (clerical error, if applicable)",
+          "required": false,
+          "visibleWhen": { "field": "opposition.opposition_type", "op": "equals", "value": "clerical_error" },
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.filingDate" }],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "grounds",
+      "title": "Grounds of Opposition",
+      "description": "'The grounds in which the said opposition is made are as follows:'",
+      "fields": [
+        {
+          "id": "ground",
+          "kind": "textarea",
+          "label": "Ground of opposition",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Ground" },
+          "validation": { "minLength": 1, "message": "State at least one ground of opposition." }
+        }
+      ]
+    },
+
+    {
+      "id": "address_for_service",
+      "title": "Address for Service in India",
+      "description": "Instruction 2: complete address incl postal index number/code and state along with telephone and fax number(s).",
+      "fields": [
+        {
+          "id": "address_for_service",
+          "kind": "textarea",
+          "label": "My/Our address for service in India",
+          "format": "address",
+          "required": true,
+          "helpText": "Must be an address in India. Include postal index no./code, state, and telephone and fax number(s).",
+          "validation": { "minLength": 2, "message": "Enter an address for service in India." }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the opponent or his authorised registered patent agent.",
+      "fields": [
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        },
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the natural person who has signed.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form26_authorisation", "key": "agent.name" }],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the opponent's address or the office where the patent was granted.",
+            "confidence": "low"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "attachments": [
+    {
+      "id": "written_statement",
+      "label": "Written statement and evidence in support of the opposition",
+      "required": false,
+      "note": "Typically accompanies the notice per the relevant opposition rule, though not enumerated as a field on the form face."
+    }
+  ],
+
+  "notes": [
+    "Note. - For fee: See First Schedule.",
+    "Note. - Strike out whichever is not applicable: select one of the six opposition types; the rest are struck out on export.",
+    "Option 6 (correction of a clerical error) references additional numbers/dates (specification and, where the error is in an application, the patent application), shown only when that type is selected."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_14.PDF",
+    "transcribedFrom": "docs/specifications/form_14.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 14",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "NOTICE OF OPPOSITION TO AMENDMENT / RESTORATION / SURRENDER OF PATENT / GRANT OF COMPULSORY LICENCE OR REVISION OF TERMS THEREOF OR TO CORRECTION OF CLERICAL ERRORS",
+      "citation": "(See sections 57(4), 61(1), 63(3), 78(5) and 87(2) and rules 81(3)(b), 85(1), 87(2), 98(1), 101(3) and 124)"
+    }
+  }
+}

@@ -1,0 +1,253 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_26",
+  "formNumber": "26",
+  "officialName": "Form for Authorisation of a Patent Agent / or Any Person in a Matter or Proceeding Under the Act",
+  "purpose": "A power of authority by which an applicant/party authorises a patent agent (or any person) to act on their behalf in a specified matter or proceeding, revokes prior authorisations, and assents to actions already taken.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Sections 127 and 132"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 135"]
+  },
+  "pageCount": 1,
+  "fee": {
+    "model": "stamp_duty",
+    "note": "To be stamped under the Indian Stamp Act, 1899 (2 of 1899). No First Schedule fee is printed on the face; the cost is the stamp duty."
+  },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column form: left column carries the numbered instructions; right column carries the authorisation with inline blanks. Export must leave room for the stamp."
+  },
+
+  "sections": [
+    {
+      "id": "authorising_party",
+      "title": "1. Name, address and nationality of the authorising party",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single authorising party, 'We' for multiple.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "authoriser_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality of the authorising party",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Authorising party" },
+          "helpText": "Full name (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the authorising party's name, address and nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "form2_specification", "key": "applicant.name" }
+            ],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        }
+      ]
+    },
+
+    {
+      "id": "authorised_person",
+      "title": "2. Name, address and nationality of the person(s) to be authorized",
+      "fields": [
+        {
+          "id": "authorised_particulars",
+          "kind": "textarea",
+          "label": "Name, address and nationality of the authorised person(s)",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Authorised person" },
+          "helpText": "For a patent agent, include the IN/PA registration number, name and address.",
+          "validation": { "minLength": 2, "message": "Enter the authorised person's name, address and nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "agent.name" }],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "matter",
+      "title": "3. Particular matter or proceeding",
+      "description": "Pre-printed: 'to act on my/our behalf in connection with ... and request that all notices, requisitions and communication relating thereto may be sent to such person at the above address unless otherwise specified.'",
+      "fields": [
+        {
+          "id": "matter_intro",
+          "kind": "boilerplate",
+          "text": "to act on",
+          "export": { "verbatim": true },
+          "presentation": { "group": "matter" }
+        },
+        {
+          "id": "my_our",
+          "kind": "strikeoutChoice",
+          "label": "my / our",
+          "options": [
+            { "value": "my", "label": "my" },
+            { "value": "our", "label": "our" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "matter", "multiline": false }
+        },
+        {
+          "id": "matter_behalf",
+          "kind": "boilerplate",
+          "text": "behalf in connection with",
+          "export": { "verbatim": true },
+          "presentation": { "group": "matter" }
+        },
+        {
+          "id": "matter_description",
+          "kind": "textarea",
+          "label": "Particular matter or proceeding",
+          "required": true,
+          "helpText": "State the particular matter or proceeding (e.g. the application number/subject).",
+          "validation": { "minLength": 1, "message": "State the matter or proceeding." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.number" }],
+            "confidence": "low"
+          },
+          "presentation": { "group": "matter", "multiline": true }
+        },
+        {
+          "id": "matter_notices",
+          "kind": "boilerplate",
+          "text": "and request that all notices, requisitions and communication relating thereto may be sent to such person at the above address unless otherwise specified.",
+          "export": { "verbatim": true },
+          "presentation": { "group": "matter" }
+        }
+      ]
+    },
+
+    {
+      "id": "declarations",
+      "title": "4. Revocation and assent",
+      "fields": [
+        {
+          "id": "revocation",
+          "kind": "boilerplate",
+          "text": "I/We hereby revoke all previous authorisation, if any made, in respect of same matter or proceeding.",
+          "export": { "verbatim": true }
+        },
+        {
+          "id": "assent",
+          "kind": "boilerplate",
+          "text": "I/We hereby assent to the action already taken by the said person in the above-matter.",
+          "export": { "verbatim": true }
+        },
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ /20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the person(s) making this authorisation.",
+      "fields": [
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the natural person who has signed, with designation and official seal, if any.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "signatory.name" }],
+            "confidence": "medium"
+          }
+        },
+        { "id": "designation", "kind": "text", "label": "Designation", "required": false },
+        { "id": "official_seal", "kind": "text", "label": "Official seal (if any)", "required": false }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the authorising party's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "Note. - To be stamped under the Indian Stamp Act, 1899 (2 of 1899).",
+    "Note. - Strike out whichever is not applicable.",
+    "This is the Power of Authority referenced by Form 1 §13(i); once on file, the agent's details can pre-fill Form 1 §6 and other forms' signatory blocks.",
+    "Capture the signatory's designation and official seal where the authoriser is an organisation."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_26.PDF",
+    "transcribedFrom": "docs/specifications/form_26.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 26",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "FORM FOR AUTHORISATION OF A PATENT AGENT / OR ANY PERSON IN A MATTER OR PROCEEDING UNDER THE ACT",
+      "citation": "(See sections 127 and 132 and rule 135)"
+    }
+  }
+}

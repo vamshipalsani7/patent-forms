@@ -13,6 +13,12 @@ window.PatentFormsApp = window.PatentFormsApp || {};
 
   var STORAGE_KEY = "patentforms.documents";
 
+  // The workspace every document lands in until the UI offers more than one.
+  // Exported so documentUpload.js and app.js agree on the value rather than
+  // each hardcoding it — a mismatch would silently split one patent's
+  // documents across two workspaces and suppress its suggestions.
+  var DEFAULT_WORKSPACE = "default";
+
   function loadAll() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -62,5 +68,9 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return loadAll().filter(function (d) { return d.workspaceId === workspaceId; });
   }
 
-  ns.documentStore = { list: list, add: add, remove: remove, rename: rename, get: get, listByWorkspace: listByWorkspace };
+  ns.documentStore = {
+    list: list, add: add, remove: remove, rename: rename, get: get,
+    listByWorkspace: listByWorkspace,
+    DEFAULT_WORKSPACE: DEFAULT_WORKSPACE
+  };
 })(window.PatentFormsApp);

@@ -32,9 +32,13 @@ def _fact(key, value, source_type="form1", confidence=0.8, document_id="doc_1"):
     )
 
 
-def _extract(document_id, *facts, source_type="form1"):
+WORKSPACE = "default"
+
+
+def _extract(document_id, *facts, source_type="form1", workspace_id=WORKSPACE):
     return DocumentExtract(
         document_id=document_id, source_type=source_type,
+        workspace_id=workspace_id,
         original_filename=f"{document_id}.pdf", page_count=1,
         facts=list(facts), extractor_version="form1@1",
     )
@@ -56,27 +60,30 @@ class IsolatedStoreTestCase(unittest.TestCase):
         content_store_module._UPLOADS_DIR = self._original_dir
         self._tmp.cleanup()
 
-    def upload(self, document_id, pdf_path, filename=None, content_type="application/pdf"):
+    def upload(self, document_id, pdf_path, filename=None,
+               content_type="application/pdf", workspace_id=WORKSPACE):
         data = Path(pdf_path).read_bytes()
         upload = UploadFile(
             file=io.BytesIO(data),
             filename=filename or Path(pdf_path).name,
             headers={"content-type": content_type},
         )
-        return asyncio.run(app_module.extract_document(file=upload, document_id=document_id))
+        return asyncio.run(app_module.extract_document(
+            file=upload, document_id=document_id, workspace_id=workspace_id,
+        ))
 
 
 class TestSuggestionGeneration(IsolatedStoreTestCase):
     def test_returns_the_documented_response_shape(self):
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Acme Ltd")))
-        response = app_module.get_suggestions("form_03")
+        response = app_module.get_suggestions("form_03", WORKSPACE)
 
         self.assertEqual("form_03", response["form_id"])
         self.assertIsInstance(response["suggestions"], dict)
 
     def test_each_suggestion_carries_value_and_provenance(self):
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Acme Ltd")))
-        suggestions = app_module.get_suggestions("form_03")["suggestions"]
+        suggestions = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
 
         self.assertIn("applicant_declaration.applicant_names", suggestions)
         entry = suggestions["applicant_declaration.applicant_names"]
@@ -86,36 +93,36 @@ class TestSuggestionGeneration(IsolatedStoreTestCase):
             self.assertIn(field, entry["fact"], f"provenance is missing '{field}'")
 
     def test_no_documents_means_no_suggestions(self):
-        response = app_module.get_suggestions("form_03")
+        response = app_module.get_suggestions("form_03", WORKSPACE)
         self.assertEqual({}, response["suggestions"])
 
     def test_a_document_with_no_facts_produces_no_suggestions(self):
         self.store.save_extract(_extract("d1", source_type="unknown"))
-        self.assertEqual({}, app_module.get_suggestions("form_03")["suggestions"])
+        self.assertEqual({}, app_module.get_suggestions("form_03", WORKSPACE)["suggestions"])
 
     def test_unknown_form_id_raises_404(self):
         with self.assertRaises(HTTPException) as caught:
-            app_module.get_suggestions("form_99_does_not_exist")
+            app_module.get_suggestions("form_99_does_not_exist", WORKSPACE)
         self.assertEqual(404, caught.exception.status_code)
 
     def test_form_id_is_not_used_to_traverse_the_filesystem(self):
         with self.assertRaises(HTTPException) as caught:
-            app_module.get_suggestions("../../../etc/passwd")
+            app_module.get_suggestions("../../../etc/passwd", WORKSPACE)
         self.assertEqual(404, caught.exception.status_code)
 
 
 class TestContentStore(IsolatedStoreTestCase):
     def test_saves_and_returns_the_pdf_path(self):
-        path = self.store.save_pdf("d1", b"%PDF-1.4 fake bytes")
+        path = self.store.save_pdf(WORKSPACE, "d1", b"%PDF-1.4 fake bytes")
         self.assertTrue(path.exists())
-        self.assertEqual(path, self.store.get_pdf_path("d1"))
+        self.assertEqual(path, self.store.get_pdf_path(WORKSPACE, "d1"))
 
     def test_returns_none_for_an_unknown_pdf(self):
-        self.assertIsNone(self.store.get_pdf_path("never_uploaded"))
+        self.assertIsNone(self.store.get_pdf_path(WORKSPACE, "never_uploaded"))
 
     def test_round_trips_an_extract(self):
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Acme Ltd")))
-        loaded = self.store.get_extract("d1")
+        loaded = self.store.get_extract(WORKSPACE, "d1")
 
         self.assertIsNotNone(loaded)
         self.assertEqual("Acme Ltd", loaded.facts[0].value)
@@ -125,23 +132,23 @@ class TestContentStore(IsolatedStoreTestCase):
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Old Name")))
         self.store.save_extract(_extract("d1", _fact("applicant.name", "New Name")))
 
-        self.assertEqual(1, len(self.store.all_extracts()))
-        self.assertEqual("New Name", self.store.get_extract("d1").facts[0].value)
+        self.assertEqual(1, len(self.store.extracts_for_workspace(WORKSPACE)))
+        self.assertEqual("New Name", self.store.get_extract(WORKSPACE, "d1").facts[0].value)
 
     def test_extracts_survive_a_restart(self):
         """Extracts are rebuildable, but must not be lost on process restart."""
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Acme Ltd")))
         reopened = content_store_module.ContentStore()
 
-        self.assertEqual(1, len(reopened.all_extracts()))
-        self.assertEqual("Acme Ltd", reopened.get_extract("d1").facts[0].value)
+        self.assertEqual(1, len(reopened.extracts_for_workspace(WORKSPACE)))
+        self.assertEqual("Acme Ltd", reopened.get_extract(WORKSPACE, "d1").facts[0].value)
 
     def test_a_corrupt_sidecar_is_skipped_rather_than_fatal(self):
         self.store.save_extract(_extract("d1", _fact("applicant.name", "Acme Ltd")))
-        (Path(self._tmp.name) / "d2.extract.json").write_text("{ corrupt", encoding="utf-8")
+        (Path(self._tmp.name) / WORKSPACE / "d2.extract.json").write_text("{ corrupt", encoding="utf-8")
 
         reopened = content_store_module.ContentStore()
-        self.assertEqual(["d1"], [e.document_id for e in reopened.all_extracts()])
+        self.assertEqual(["d1"], [e.document_id for e in reopened.extracts_for_workspace(WORKSPACE)])
 
 
 class TestExtractEndpointGuards(IsolatedStoreTestCase):
@@ -151,7 +158,9 @@ class TestExtractEndpointGuards(IsolatedStoreTestCase):
             headers={"content-type": "text/plain"},
         )
         with self.assertRaises(HTTPException) as caught:
-            asyncio.run(app_module.extract_document(file=upload, document_id="d1"))
+            asyncio.run(app_module.extract_document(
+                file=upload, document_id="d1", workspace_id=WORKSPACE,
+            ))
         self.assertEqual(400, caught.exception.status_code)
 
     def test_rejects_an_empty_upload(self):
@@ -160,7 +169,9 @@ class TestExtractEndpointGuards(IsolatedStoreTestCase):
             headers={"content-type": "application/pdf"},
         )
         with self.assertRaises(HTTPException) as caught:
-            asyncio.run(app_module.extract_document(file=upload, document_id="d1"))
+            asyncio.run(app_module.extract_document(
+                file=upload, document_id="d1", workspace_id=WORKSPACE,
+            ))
         self.assertEqual(400, caught.exception.status_code)
 
     def test_an_unreadable_pdf_degrades_instead_of_raising_500(self):
@@ -169,7 +180,9 @@ class TestExtractEndpointGuards(IsolatedStoreTestCase):
             file=io.BytesIO(b"%PDF-1.4 this is not really a pdf"),
             filename="broken.pdf", headers={"content-type": "application/pdf"},
         )
-        result = asyncio.run(app_module.extract_document(file=upload, document_id="d_broken"))
+        result = asyncio.run(app_module.extract_document(
+            file=upload, document_id="d_broken", workspace_id=WORKSPACE,
+        ))
 
         self.assertIn("error", result)
         self.assertEqual([], result["facts"])
@@ -177,22 +190,25 @@ class TestExtractEndpointGuards(IsolatedStoreTestCase):
 
 
 class TestWorkspaceScopingBoundary(IsolatedStoreTestCase):
-    """Where cross-matter isolation is (and is not) enforced today.
+    """Cross-matter isolation is now enforced in the backend, not just the UI.
 
     Merging a Form 1 for Patent A with a certificate for Patent B produces a
     confidently wrong profile — the worst failure mode, because it looks fine.
-    In this slice that isolation lives in the frontend documentStore
-    (`workspaceId`, covered by tests/frontend/document_store.test.mjs). The
-    backend content store is deliberately still a flat pool; this test records
-    that boundary so a future workspace-scoped store has a failing test to fix
-    rather than an unstated assumption to discover.
+    Full coverage lives in test_workspace_isolation.py; these two keep the
+    guarantee asserted at the point it used to be missing.
     """
 
-    def test_backend_store_currently_pools_all_documents(self):
-        self.store.save_extract(_extract("patent_a", _fact("applicant.name", "Company A")))
-        self.store.save_extract(_extract("patent_b", _fact("applicant.name", "Company B")))
+    def test_documents_are_pooled_only_within_their_own_workspace(self):
+        self.store.save_extract(
+            _extract("doc_a", _fact("applicant.name", "Company A"), workspace_id="patent_a")
+        )
+        self.store.save_extract(
+            _extract("doc_b", _fact("applicant.name", "Company B"), workspace_id="patent_b")
+        )
 
-        self.assertEqual(2, len(self.store.all_extracts()))
+        self.assertEqual(1, len(self.store.extracts_for_workspace("patent_a")))
+        self.assertEqual(1, len(self.store.extracts_for_workspace("patent_b")))
+        self.assertEqual(0, len(self.store.extracts_for_workspace(WORKSPACE)))
 
     def test_a_profile_only_ever_sees_the_extracts_it_is_given(self):
         """The isolation primitive: scoping is a matter of what you pass in."""

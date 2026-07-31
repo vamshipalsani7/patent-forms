@@ -1,0 +1,360 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_18a",
+  "formNumber": "18A",
+  "officialName": "Request for Expedited Examination of Application for Patent",
+  "purpose": "Request expedited examination of a patent application under Rule 24C, stating the request (ordinary / PCT-express / conversion of an existing Form 18 request), ticking the eligibility ground(s), and submitting the mandatory evidence for the chosen ground.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Section 11B"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 24C"]
+  },
+  "pageCount": 3,
+  "fee": { "model": "first_schedule", "note": "For fee: See First Schedule. A prescribed (higher) fee applies for expedited examination." },
+  "layout": {
+    "columns": 1,
+    "notes": "FOR OFFICE USE ONLY header block, then Sections 1-4 plus address for service, signature and note. Section 2 offers three mutually exclusive request statements; Section 3 is a set of eligibility-ground checkboxes; Section 4 is a static reference table mapping each ground to the mandatory evidence."
+  },
+
+  "sections": [
+    {
+      "id": "office_use",
+      "title": "FOR OFFICE USE ONLY",
+      "officeUseOnly": true,
+      "fields": [
+        { "id": "rq_no", "kind": "text", "label": "RQ No.", "officeUseOnly": true },
+        { "id": "filing_date", "kind": "date", "label": "Filing Date", "officeUseOnly": true },
+        { "id": "fee_paid", "kind": "number", "label": "Amount of fee Paid", "format": "currency", "officeUseOnly": true },
+        { "id": "cbr_no", "kind": "text", "label": "CBR no", "officeUseOnly": true },
+        { "id": "office_signature", "kind": "signature", "label": "Signature", "officeUseOnly": true }
+      ]
+    },
+
+    {
+      "id": "applicant",
+      "title": "1. APPLICANT(S)",
+      "fields": [
+        {
+          "id": "name",
+          "kind": "text",
+          "label": "NAME",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the applicant's name." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.name" }],
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "nationality",
+          "kind": "text",
+          "label": "NATIONALITY",
+          "format": "country",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the applicant's nationality." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.nationality" }],
+            "confidence": "medium"
+          }
+        },
+        {
+          "id": "address",
+          "kind": "textarea",
+          "label": "ADDRESS",
+          "format": "address",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the applicant's address." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.address" }],
+            "confidence": "medium"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "request",
+      "title": "2. REQUEST STATEMENT",
+      "description": "Choose one of the three request statements. Strike out the column(s) which is/are not applicable.",
+      "fields": [
+        {
+          "id": "request_type",
+          "kind": "radio",
+          "label": "Request statement (choose one)",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "ordinary", "label": "…request that my/our application for patent no. …… filed on …… for the …… invention titled …… shall be examined under sections 12 and 13 of the Act." },
+            { "value": "pct_express", "label": "… based on Patent Cooperation Treaty (PCT) application no. …… dated …… made in country …… shall be examined … immediately without waiting for the expiry of 31 months as specified in rule 20(4)(ii)." },
+            { "value": "conversion", "label": "…request that my/our request for examination bearing no. …… for application for patent no. …… filed on …… for the …… invention titled …… may be converted to a request for expedited examination of patent application under rule 24C …" }
+          ]
+        },
+        {
+          "id": "application_number",
+          "kind": "text",
+          "label": "Application for patent no.",
+          "format": "applicationNumber",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "isFilled" },
+          "validation": {
+            "pattern": "^([0-9]{11,12}|[0-9]{1,6}/[A-Za-z]{2,5}/[0-9]{4})$",
+            "patternMessage": "Expected an IPO application number, e.g. 202211012345 or 1234/DEL/2015."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.number" }],
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "filed_on",
+          "kind": "date",
+          "label": "Filed on",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "isFilled" },
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.filingDate" }],
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "invention_title",
+          "kind": "text",
+          "label": "Invention titled",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "isFilled" },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "invention.title" },
+              { "sourceType": "form2_specification", "key": "invention.title" }
+            ],
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "pct_application_number",
+          "kind": "text",
+          "label": "PCT application no.",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" },
+          "visibleWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "pct_document", "key": "application.number" }],
+            "confidence": "medium"
+          }
+        },
+        {
+          "id": "pct_date",
+          "kind": "date",
+          "label": "PCT dated",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" },
+          "visibleWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" },
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "pct_document", "key": "application.filingDate" }],
+            "confidence": "medium"
+          }
+        },
+        {
+          "id": "pct_country",
+          "kind": "text",
+          "label": "Made in country",
+          "format": "country",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" },
+          "visibleWhen": { "field": "request.request_type", "op": "equals", "value": "pct_express" }
+        },
+        {
+          "id": "existing_rq_number",
+          "kind": "text",
+          "label": "Existing request-for-examination no.",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "equals", "value": "conversion" },
+          "visibleWhen": { "field": "request.request_type", "op": "equals", "value": "conversion" },
+          "helpText": "The RQ number of the existing Form 18 request being converted."
+        }
+      ]
+    },
+
+    {
+      "id": "eligibility",
+      "title": "3. ELIGIBILITY GROUNDS (tick the applicable box)",
+      "description": "At least one ground applies. The selected ground determines the mandatory evidence listed in Section 4.",
+      "fields": [
+        {
+          "id": "ground",
+          "kind": "checkboxGroup",
+          "label": "Eligibility ground(s)",
+          "required": true,
+          "selection": "multiple",
+          "options": [
+            { "value": "isa_ipea", "label": "that India has been indicated as the competent International Searching Authority or elected as an International Preliminary Examining Authority in the corresponding international application" },
+            { "value": "startup", "label": "that the applicant is a startup" },
+            { "value": "small_entity", "label": "that the applicant is a small entity" },
+            { "value": "female_applicant", "label": "that the applicant is a natural person or in the case of joint applicants, all the applicants are natural persons, then applicant or at least one of the applicants is a female" },
+            { "value": "government_institution", "label": "that the applicant is an institution established by a Central, Provincial or State Act, which is owned or controlled by the Government" },
+            { "value": "government_company", "label": "that the applicant is a Government company as defined in clause (45) of section 2 of the Companies Act, 2013 (18 of 2013); or that the applicant is an institution wholly or substantially financed by the Government" },
+            { "value": "notified_sector", "label": "that the application pertains to a sector which has been notified by the Central Government, on the basis of a request from the head of department of the Central Government" },
+            { "value": "ipo_arrangement", "label": "that the applicant is eligible under an arrangement for processing a patent application pursuant to an agreement between Indian Patent Office and a foreign Patent Office" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "The applicant category recorded on Form 1 §3B (startup / small entity / natural person) strongly predicts the applicable ground; pre-tick but leave the user to confirm.",
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "evidence_reference",
+      "title": "4. MANDATORY EVIDENCE OF ELIGIBILITY",
+      "description": "Static reference: the document(s) that must be submitted for each ground. The row applicable to the selected Section 3 ground drives a required attachment.",
+      "fields": [
+        {
+          "id": "evidence_table_reference",
+          "kind": "boilerplate",
+          "text": "a. India as competent ISA / elected IPEA — Relevant ISA number issued by ISA, India / relevant IPEA number issued by IPEA, India.\nb. Startup — Indian applicant: certificate of recognition as a startup from DPIIT. Foreign entity: any document as evidence of eligibility.\nc. Small entity — Indian applicant: evidence of registration under the MSME Act, 2006 (27 of 2006). Foreign entity: any document as evidence.\nd. Natural person / female applicant — Indian & foreign: photo identity card of the female applicant issued by competent authority.\ne. Department of the Government — Indian & foreign: any document as evidence of eligibility.\nf. Institution established by Central/Provincial/State Act, owned/controlled by Govt — Indian & foreign: any document as evidence of eligibility.\ng. Government company (s.2(45), Companies Act 2013) — Indian & foreign: any document as evidence of eligibility.\nh. Institution wholly/substantially financed by Govt — Indian & foreign: any document as evidence of eligibility.\ni. Application in a Central-Government-notified sector — Notification from the Central Government and documents as may be required by the Controller.\nj. Eligible under an IPO–foreign-office arrangement — Declarations and documents as may be required by the Controller.",
+          "export": { "verbatim": true }
+        }
+      ]
+    },
+
+    {
+      "id": "address_for_service",
+      "title": "ADDRESS FOR SERVICE IN INDIA",
+      "fields": [
+        {
+          "id": "address_for_service",
+          "kind": "textarea",
+          "label": "Address for service in India",
+          "format": "address",
+          "required": true,
+          "helpText": "Must be an address in India.",
+          "validation": { "minLength": 2, "message": "Enter an address for service in India." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.address" }],
+            "confidence": "low"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the applicant(s) or by his/their authorized registered patent agent.",
+      "fields": [
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / signing date; editable.",
+            "confidence": "high"
+          }
+        },
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name of the signatory",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the signatory",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the name of the signatory." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To,\nThe Controller of Patent,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the applicant's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "attachments": [
+    {
+      "id": "eligibility_evidence",
+      "label": "Mandatory evidence of eligibility for the ground selected in Section 3, per the reference in Section 4",
+      "required": true,
+      "note": "Ground (d) requires a photo identity card of the female applicant issued by a competent authority — sensitive personal data; mask and never place in URLs or logs."
+    }
+  ],
+
+  "notes": [
+    "Note. - To be signed by the applicant(s) or by his/their authorized registered patent agent.",
+    "Note. - Strike out the column(s) which is/are not applicable.",
+    "Note. - For fee: See First Schedule.",
+    "Ground → evidence coupling: the ground selected in Section 3 determines which Section 4 evidence document must be uploaded.",
+    "Ground (d) requires a photo identity card of the female applicant — treat as sensitive personal data.",
+    "The Section 3 checkboxes (8) combine some grounds that the Section 4 reference enumerates separately (a-j = 10); both are preserved as printed, and the evidence required is keyed to the Section 4 lettering.",
+    "Distinct from Form 18, the ordinary/express request for examination; Form 18A is specifically the expedited route under rule 24C."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_18A.PDF",
+    "transcribedFrom": "docs/specifications/form_18a.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 18A",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "REQUEST FOR EXPEDITED EXAMINATION OF APPLICATION FOR PATENT",
+      "citation": "(See section 11B and rule 24C)"
+    }
+  }
+}

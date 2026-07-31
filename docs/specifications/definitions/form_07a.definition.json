@@ -1,0 +1,276 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_07a",
+  "formNumber": "7A",
+  "officialName": "Representation for Opposition to Grant of Patent",
+  "purpose": "File a pre-grant representation by way of opposition to the grant of a patent, in respect of a published application, stating the representor's particulars and the grounds.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)", "Section 25(1)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 55"]
+  },
+  "pageCount": 1,
+  "fee": {
+    "model": "none",
+    "note": "No fee is indicated on the face of Form 7A. Pre-grant representation under Rule 55 is historically without fee — confirm against the current First Schedule before relying on this."
+  },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column form: left column carries the numbered instructions (1-5); right column carries the running representation with inline blanks. Structurally parallel to Form 7 but for a PUBLISHED APPLICATION (there is no granted patent number yet). Form 7A prints no 'Dated this...' line."
+  },
+
+  "sections": [
+    {
+      "id": "representor",
+      "title": "Representor Particulars",
+      "description": "Instruction 1: state the names, address and nationality of the representor(s). The representor is usually a third party.",
+      "fields": [
+        {
+          "id": "iwe",
+          "kind": "strikeoutChoice",
+          "label": "I/We",
+          "required": true,
+          "options": [
+            { "value": "i", "label": "I" },
+            { "value": "we", "label": "We" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Choose 'I' for a single representor, 'We' for multiple.",
+            "confidence": "high"
+          },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "representor_particulars",
+          "kind": "textarea",
+          "label": "Names, address and nationality of the representor(s)",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Representor" },
+          "helpText": "Full name(s) (family/principal name first), complete address incl postal index no./code and state, and nationality.",
+          "validation": { "minLength": 2, "message": "Enter the representor's name, address and nationality." },
+          "presentation": { "group": "row1", "multiline": true }
+        }
+      ]
+    },
+
+    {
+      "id": "application",
+      "title": "Application Being Opposed",
+      "description": "Pre-printed: 'hereby give representation by way of opposition to the grant of patent in respect of application no ...... dated ...... made by ...... and published on ......'",
+      "fields": [
+        {
+          "id": "clause_intro",
+          "kind": "boilerplate",
+          "text": "hereby give representation by way of opposition to the grant of patent in respect of application no",
+          "export": { "verbatim": true },
+          "presentation": { "group": "app" }
+        },
+        {
+          "id": "application_number",
+          "kind": "text",
+          "label": "Application No.",
+          "format": "applicationNumber",
+          "required": true,
+          "validation": {
+            "pattern": "^([0-9]{11,12}|[0-9]{1,6}/[A-Za-z]{2,5}/[0-9]{4})$",
+            "patternMessage": "Expected an IPO application number, e.g. 202211012345 or 1234/DEL/2015."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.number" }],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "app", "multiline": false }
+        },
+        {
+          "id": "clause_dated",
+          "kind": "boilerplate",
+          "text": "dated",
+          "export": { "verbatim": true },
+          "presentation": { "group": "app" }
+        },
+        {
+          "id": "application_date",
+          "kind": "date",
+          "label": "Application dated",
+          "required": true,
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "application.filingDate" }],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "app", "multiline": false }
+        },
+        {
+          "id": "clause_made_by",
+          "kind": "boilerplate",
+          "text": "made by",
+          "export": { "verbatim": true },
+          "presentation": { "group": "app" }
+        },
+        {
+          "id": "made_by",
+          "kind": "textarea",
+          "label": "Made by (applicant)",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the applicant of the opposed application." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form1", "key": "applicant.name" }],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "app", "multiline": true }
+        },
+        {
+          "id": "clause_published_on",
+          "kind": "boilerplate",
+          "text": "and published on",
+          "export": { "verbatim": true },
+          "presentation": { "group": "app" }
+        },
+        {
+          "id": "published_date",
+          "kind": "date",
+          "label": "Published on (date)",
+          "required": true,
+          "helpText": "Date of publication of the application under section 11A (from the patent gazette / publication record).",
+          "validation": { "notFuture": true },
+          "presentation": { "group": "app", "multiline": false }
+        }
+      ]
+    },
+
+    {
+      "id": "grounds",
+      "title": "Grounds",
+      "description": "Instruction 2: state the grounds one after another.",
+      "fields": [
+        {
+          "id": "ground",
+          "kind": "textarea",
+          "label": "Ground of representation / opposition",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Ground" },
+          "validation": { "minLength": 1, "message": "State at least one ground." }
+        }
+      ]
+    },
+
+    {
+      "id": "address_for_service",
+      "title": "Address for Service in India",
+      "description": "Instruction 3: complete address incl postal index number/code and state along with telephone and fax number.",
+      "fields": [
+        {
+          "id": "address_for_service",
+          "kind": "textarea",
+          "label": "My/our address for service in India",
+          "format": "address",
+          "required": true,
+          "helpText": "Must be an address in India. Include postal index no./code, state, and telephone and fax number.",
+          "validation": { "minLength": 2, "message": "Enter an address for service in India." }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "To be signed by the opponent or by his/her authorized registered patent agent.",
+      "fields": [
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "Name and designation of the natural person who has signed.",
+      "description": "Form 7A asks for name AND designation, unlike Form 7 (name only).",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "form26_authorisation", "key": "agent.name" }],
+            "confidence": "low"
+          }
+        },
+        {
+          "id": "designation",
+          "kind": "text",
+          "label": "Designation",
+          "required": true,
+          "validation": { "minLength": 1, "message": "Enter the signatory's designation." }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the representor's address or the office handling the published application.",
+            "confidence": "low"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "attachments": [
+    {
+      "id": "statement_and_evidence",
+      "label": "Statement and evidence in support of the representation",
+      "required": false,
+      "note": "Typically accompanies the representation, though not enumerated as a field on the form face."
+    }
+  ],
+
+  "notes": [
+    "Note. - Strike out whichever is not applicable (I/We, My/our, his/her).",
+    "Form 7A is the PRE-GRANT representation (published application, no patent number); Form 7 is the POST-GRANT opposition (granted patent number).",
+    "Form 7A asks for the name AND designation of the natural person who has signed.",
+    "No 'Dated this...' line is printed on Form 7A; the signing date is recorded at application level, not as a printed field."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_7A.PDF",
+    "transcribedFrom": "docs/specifications/form_07a.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 7A",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "REPRESENTATION FOR OPPOSITION TO GRANT OF PATENT",
+      "citation": "(See section 25(1) and rule 55)"
+    }
+  }
+}

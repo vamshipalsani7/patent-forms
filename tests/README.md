@@ -59,6 +59,8 @@ tests/
 │   ├── test_autofill_mapper.py
 │   ├── test_profile_builder.py
 │   ├── test_suggestions_api.py
+│   ├── test_workspace_isolation.py
+│   ├── test_atomic_writes.py
 │   └── test_integration_vertical_slice.py
 └── frontend/
     ├── harness.mjs                     window/document/localStorage shims
@@ -78,9 +80,10 @@ tests/
 | Autofill mapper | `test_autofill_mapper.py` | Authored source order beating confidence, repeatable array wrapping, nested/table fields, and genericity against an unseen definition |
 | Profile builder | `test_profile_builder.py` | Extractor dispatch, unsupported types degrading quietly, and the merged `PatentProfile` projection |
 | Suggestion generation | `test_suggestions_api.py` | Response shape, provenance, 404s, upload guards, and content-store durability |
-| Workspace isolation | `workspace_isolation.test.mjs` + `test_suggestions_api.py` | `workspaceId` stamping and scoped queries; see the caveat below |
+| Workspace isolation | `test_workspace_isolation.py` + `workspace_isolation.test.mjs` | Enforced end to end — store, model, API, filesystem, restart, and the absence of any unscoped read |
 | Draft persistence | `draft_persistence.test.mjs` | Draft round-trip including `userEditedPaths`, per-form scoping, corrupt-storage tolerance |
 | Suggested vs user-edited | `main_area_separation.test.mjs` | Finding F3 — the full lifecycle, including that re-extraction refreshes untouched fields but never overwrites a user edit |
+| Crash safety | `test_atomic_writes.py` | Interrupted writes cannot destroy a valid file, leave a truncated one, or leak temp files |
 | Vertical slice | `test_integration_vertical_slice.py` | Real PDF bytes through the whole chain, with provenance asserted end to end |
 
 ## Notes on the approach
@@ -106,17 +109,21 @@ tests break.
 **Tests never touch `backend/uploads/`.** Every test that persists anything
 redirects `ContentStore` at a temporary directory and restores it afterwards.
 
+**Crash safety is tested by interrupting real writes**, not by inspecting
+code. `test_atomic_writes.py` makes `os.fsync` or `os.replace` raise, which
+reproduces the on-disk state a kill produces at that moment, then asks what
+the next `ContentStore()` sees. A true SIGKILL cannot be caught inside a
+test; the filesystem states it leaves behind are what these reproduce.
+
+**Workspace isolation is asserted at every layer that could leak** — the
+store, the `PatentProfile` model, both API endpoints, the filesystem, and
+across a restart — plus a test that the unscoped bulk read no longer exists,
+so the original leak cannot be reintroduced by calling it again.
+
 ## Known coverage gaps
 
 These are deliberate, and stated so they are not mistaken for coverage:
 
-- **Workspace isolation is only enforced frontend-side.** `ContentStore` is
-  still a flat pool — `all_extracts()` returns every document regardless of
-  workspace, so `GET /api/suggestions/{form_id}` builds one profile from
-  everything uploaded. `TestWorkspaceScopingBoundary` in
-  `test_suggestions_api.py` records that boundary explicitly. Uploading
-  documents for two different patents will merge them; the `workspaceId` field
-  exists and is populated, but the backend does not yet filter on it.
 - **The AcroForm tier (Tier 1) is tested via a stub, not a real AcroForm PDF.**
   Both fixtures are text-layer PDFs, so `_extract_acroform` returns nothing and
   `TestTierPrecedence` substitutes it to verify precedence.
@@ -127,11 +134,19 @@ These are deliberate, and stated so they are not mistaken for coverage:
 
 ## Confidence check
 
-The suite was mutation-tested against the three real bugs found while building
-the vertical slice, to confirm the tests actually fail when the code is wrong:
+The suite was mutation-tested — each mechanism was deliberately broken to
+confirm the tests actually fail when the code is wrong. The first three are the
+real bugs found while building the vertical slice; the next three are the
+workspace-isolation mechanisms; the last three are the atomic-write guarantees:
 
 | Reintroduced bug | Caught by |
 |---|---|
 | `valuesEqual` reverted to strict `!==` | `an unchanged array value is not mistaken for an edit` |
 | Repeatable array-wrap removed from the mapper | 3 mapper/integration tests |
 | `EXTRACTOR_VERSION` class attribute removed | 3 extractor/builder tests |
+| `extracts_for_workspace()` returning every workspace | 13 tests across 4 files |
+| `PatentProfile` no longer rejecting foreign extracts | 2 isolation tests |
+| Endpoint identifier validation removed | 1 traversal test |
+| Atomic writes reverted to truncate-and-write | 16 crash-safety tests |
+| Temp-file cleanup on failure removed | 1 hygiene test |
+| Startup sweep of orphaned temp files removed | 1 hygiene test |

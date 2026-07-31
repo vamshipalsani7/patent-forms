@@ -1,0 +1,272 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_08a",
+  "formNumber": "8A",
+  "officialName": "Certificate of Inventorship",
+  "purpose": "Request the grant of a Certificate of Inventorship in respect of a patent, or request a duplicate certificate with a statement of the circumstances in which the original was lost, destroyed, damaged or cannot be produced.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 70A"]
+  },
+  "pageCount": 1,
+  "fee": {
+    "model": "none",
+    "note": "No fee is printed on the face of Form 8A; confirm against the current First Schedule / Rule 70A."
+  },
+  "layout": {
+    "columns": 2,
+    "notes": "Two rows: Row 1 is the request, with an OR branch (original vs duplicate certificate); Row 2 is the signature plus a mandatory identity block. Form 8A is signed by the INVENTOR personally, not (only) by an agent."
+  },
+
+  "sections": [
+    {
+      "id": "request",
+      "title": "Inventor, Patent and Request Type",
+      "fields": [
+        {
+          "id": "request_type",
+          "kind": "radio",
+          "label": "Request type (choose one)",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "certificate", "label": "Certificate of Inventorship" },
+            { "value": "duplicate", "label": "Duplicate certificate of inventorship" }
+          ]
+        },
+        {
+          "id": "clause_i",
+          "kind": "boilerplate",
+          "text": "I",
+          "export": { "verbatim": true },
+          "presentation": { "group": "req" }
+        },
+        {
+          "id": "inventor_name",
+          "kind": "text",
+          "label": "Name of the Inventor",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the inventor's full name." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form5", "key": "inventor.name" },
+              { "sourceType": "form1", "key": "inventor.name" }
+            ],
+            "confidence": "high"
+          },
+          "presentation": { "group": "req", "multiline": false }
+        },
+        {
+          "id": "clause_in_respect_of",
+          "kind": "boilerplate",
+          "text": "in respect of Patent Number",
+          "export": { "verbatim": true },
+          "presentation": { "group": "req" }
+        },
+        {
+          "id": "patent_number",
+          "kind": "text",
+          "label": "Patent Number",
+          "format": "patentNumber",
+          "required": true,
+          "validation": {
+            "pattern": "^[A-Za-z0-9/-]{1,20}$",
+            "patternMessage": "Enter the patent number."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [{ "sourceType": "patent_certificate", "key": "patent.number" }],
+            "confidence": "high"
+          },
+          "presentation": { "group": "req", "multiline": false }
+        },
+        {
+          "id": "statement_of_circumstances",
+          "kind": "textarea",
+          "label": "Circumstances in which the original certificate was lost, destroyed, damaged or cannot be produced",
+          "required": false,
+          "requiredWhen": { "field": "request.request_type", "op": "equals", "value": "duplicate" },
+          "visibleWhen": { "field": "request.request_type", "op": "equals", "value": "duplicate" },
+          "helpText": "Required only when a duplicate certificate is requested.",
+          "validation": { "minLength": 1, "message": "State the circumstances relating to the original certificate." }
+        }
+      ]
+    },
+
+    {
+      "id": "identity",
+      "title": "To be signed by the inventor and the date of filing of this request. (BELOW INFORMATION IS MANDATORILY REQUIRED TO BE SUBMITTED)",
+      "description": "The identity block printed beneath the signature. Address, mobile and email are collected for the inventor personally.",
+      "fields": [
+        {
+          "id": "signature",
+          "kind": "signature",
+          "label": "Signature",
+          "required": true,
+          "helpText": "Must be signed by the inventor personally, not merely by an agent."
+        },
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the Inventor who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the name of the inventor who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form5", "key": "inventor.name" },
+              { "sourceType": "form1", "key": "inventor.name" }
+            ],
+            "confidence": "high"
+          }
+        },
+        {
+          "id": "aadhaar_number",
+          "kind": "number",
+          "label": "Aadhaar number of the Inventor",
+          "required": false,
+          "helpText": "For Indian inventors.",
+          "validation": {
+            "pattern": "^[0-9]{12}$",
+            "patternMessage": "An Aadhaar number is 12 digits."
+          },
+          "sensitive": {
+            "pii": true,
+            "redacted": true,
+            "note": "Highly sensitive identity number. Mask in the UI; never place in URLs or logs."
+          }
+        },
+        { "id": "house_no", "kind": "text", "label": "House No.", "required": true, "validation": { "minLength": 1, "message": "Enter the house number." }, "sensitive": { "pii": true } },
+        { "id": "street", "kind": "text", "label": "Apartment/Street", "required": true, "validation": { "minLength": 1, "message": "Enter the apartment/street." }, "sensitive": { "pii": true } },
+        { "id": "city", "kind": "text", "label": "City", "required": true, "validation": { "minLength": 1, "message": "Enter the city." } },
+        { "id": "state", "kind": "text", "label": "State", "required": true, "validation": { "minLength": 1, "message": "Enter the state." } },
+        { "id": "country", "kind": "text", "label": "Country", "format": "country", "required": true, "validation": { "minLength": 2, "message": "Enter the country." } },
+        {
+          "id": "pin_code",
+          "kind": "number",
+          "label": "Pin Code",
+          "format": "pincode",
+          "required": true,
+          "validation": {
+            "pattern": "^[0-9]{6}$",
+            "patternMessage": "An Indian PIN code is 6 digits."
+          }
+        },
+        {
+          "id": "mobile_phone",
+          "kind": "number",
+          "label": "Mobile Phone",
+          "format": "phone",
+          "required": true,
+          "helpText": "OTP verification mandatory — will be redacted.",
+          "validation": { "minLength": 1, "message": "Enter the mobile number." },
+          "sensitive": {
+            "pii": true,
+            "redacted": true,
+            "requiresOtp": true,
+            "note": "OTP verification mandatory — will be redacted in the published record."
+          }
+        },
+        {
+          "id": "email",
+          "kind": "text",
+          "label": "Email",
+          "format": "email",
+          "required": true,
+          "helpText": "OTP verification mandatory — will be redacted.",
+          "validation": {
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "patternMessage": "Enter a valid email address."
+          },
+          "sensitive": {
+            "pii": true,
+            "redacted": true,
+            "requiresOtp": true,
+            "note": "OTP verification mandatory — will be redacted in the published record."
+          }
+        },
+        {
+          "id": "statement_date",
+          "kind": "date",
+          "label": "Dated this __ day of __ 20__",
+          "required": true,
+          "helpText": "Date of filing this request.",
+          "validation": { "notFuture": true },
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Default to the preparation / filing date; editable.",
+            "confidence": "high"
+          }
+        }
+      ]
+    },
+
+    {
+      "id": "disclaimer",
+      "title": "Note",
+      "fields": [
+        {
+          "id": "certificate_disclaimer",
+          "kind": "boilerplate",
+          "text": "This Certificate does not, in any manner whatsoever, confer or derogate from any rights under the patent.",
+          "export": { "verbatim": true }
+        }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the inventor's address or the office recorded on the patent.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "Footer note: This Certificate does not, in any manner whatsoever, confer or derogate from any rights under the patent.",
+    "Form 8A is signed by the INVENTOR personally, unlike most forms which may be signed by an authorised agent.",
+    "The Aadhaar number is required only for Indian inventors and is highly sensitive personal data.",
+    "Mobile and email require OTP verification and are redacted in the published record."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_8A.PDF",
+    "transcribedFrom": "docs/specifications/form_08a.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 8A",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "CERTIFICATE OF INVENTORSHIP",
+      "citation": "(See rule 70A)"
+    }
+  }
+}

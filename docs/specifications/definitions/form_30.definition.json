@@ -1,0 +1,274 @@
+{
+  "schemaVersion": "1.0",
+  "formId": "form_30",
+  "formNumber": "30",
+  "officialName": "To Be Used When No Other Form Is Prescribed",
+  "purpose": "A generic/catch-all form for any request to the Patent Office for which no specific form is prescribed. The user states the relevant provision, the purpose, and the details of the request.",
+  "legalReference": {
+    "act": ["THE PATENTS ACT, 1970 (39 of 1970)"],
+    "rules": ["THE PATENTS RULES, 2003", "Rule 8, sub-rule (2)"]
+  },
+  "pageCount": 1,
+  "fee": {
+    "model": "other",
+    "note": "No fee note is printed on the face of Form 30; the applicable fee (if any) depends on the underlying request — check the First Schedule for the specific action."
+  },
+  "layout": {
+    "columns": 2,
+    "notes": "Two-column table with eight numbered rows. Because it is a catch-all, the purpose and details fields are deliberately general free text — but the field set is fixed and must not be conflated with any other form. Form 30 prints no 'Dated this...' line."
+  },
+
+  "sections": [
+    {
+      "id": "applicant",
+      "title": "1. Name of the Applicant/Patentee/Other",
+      "fields": [
+        {
+          "id": "capacity",
+          "kind": "strikeoutChoice",
+          "label": "Applicant / Patentee / Other",
+          "required": true,
+          "options": [
+            { "value": "applicant", "label": "Applicant" },
+            { "value": "patentee", "label": "Patentee" },
+            { "value": "other", "label": "Other" }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "row1", "multiline": false }
+        },
+        {
+          "id": "applicant_name",
+          "kind": "textarea",
+          "label": "Name",
+          "required": true,
+          "repeatable": { "min": 1, "max": null, "itemLabel": "Name" },
+          "validation": { "minLength": 2, "message": "Enter the name." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "applicant.name" },
+              { "sourceType": "patent_certificate", "key": "patentee.name" }
+            ],
+            "confidence": "medium"
+          },
+          "presentation": { "group": "row1", "multiline": true }
+        }
+      ]
+    },
+
+    {
+      "id": "address",
+      "title": "2. Complete address including postal index number/code and State along with e-mail ID, telephone, mobile and fax number.",
+      "description": "Printed as a grid of labelled cells forming a single address block (not multi-row).",
+      "fields": [
+        { "id": "house_no", "kind": "text", "label": "House No.", "required": true, "validation": { "minLength": 1, "message": "Enter the house number." } },
+        { "id": "street", "kind": "text", "label": "Street", "required": true, "validation": { "minLength": 1, "message": "Enter the street." } },
+        { "id": "city", "kind": "text", "label": "City", "required": true, "validation": { "minLength": 1, "message": "Enter the city." } },
+        { "id": "state", "kind": "text", "label": "State", "required": true, "validation": { "minLength": 1, "message": "Enter the state." } },
+        { "id": "country", "kind": "text", "label": "Country", "format": "country", "required": true, "validation": { "minLength": 2, "message": "Enter the country." } },
+        {
+          "id": "pin_code",
+          "kind": "number",
+          "label": "Pin code",
+          "format": "pincode",
+          "required": true,
+          "validation": {
+            "pattern": "^[0-9]{6}$",
+            "patternMessage": "An Indian PIN code is 6 digits."
+          }
+        },
+        { "id": "telephone_no", "kind": "number", "label": "Telephone No.", "format": "phone", "required": false },
+        {
+          "id": "mobile_no",
+          "kind": "number",
+          "label": "Mobile No.",
+          "format": "phone",
+          "required": true,
+          "validation": { "minLength": 1, "message": "Enter the mobile number." },
+          "sensitive": { "pii": true, "note": "Contact detail." }
+        },
+        { "id": "fax_no", "kind": "number", "label": "Fax No.", "required": false },
+        {
+          "id": "email",
+          "kind": "text",
+          "label": "E-mail ID",
+          "format": "email",
+          "required": true,
+          "validation": {
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "patternMessage": "Enter a valid email address."
+          },
+          "sensitive": { "pii": true, "note": "Contact detail." }
+        }
+      ]
+    },
+
+    {
+      "id": "reference",
+      "title": "3. Application No. / Patent No.",
+      "fields": [
+        {
+          "id": "reference_type",
+          "kind": "strikeoutChoice",
+          "label": "Application No. / Patent No.",
+          "required": true,
+          "options": [
+            { "value": "application", "label": "Application No." },
+            { "value": "patent", "label": "Patent No." }
+          ],
+          "export": { "strikeoutUnselected": true },
+          "presentation": { "group": "ref", "multiline": false }
+        },
+        {
+          "id": "reference_number",
+          "kind": "text",
+          "label": "Number",
+          "required": true,
+          "validation": {
+            "pattern": "^[A-Za-z0-9/-]{1,20}$",
+            "patternMessage": "Enter the application or patent number."
+          },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form1", "key": "application.number" },
+              { "sourceType": "patent_certificate", "key": "patent.number" }
+            ],
+            "confidence": "high"
+          },
+          "presentation": { "group": "ref", "multiline": false }
+        }
+      ]
+    },
+
+    {
+      "id": "provision",
+      "title": "4. Relevant Section / Rules",
+      "fields": [
+        {
+          "id": "relevant_provision",
+          "kind": "text",
+          "label": "Relevant section / rules",
+          "required": true,
+          "helpText": "The statutory provision under which the request is made.",
+          "validation": { "minLength": 1, "message": "Cite the relevant section or rule." }
+        }
+      ]
+    },
+
+    {
+      "id": "purpose",
+      "title": "5. Purpose of Request",
+      "fields": [
+        {
+          "id": "purpose_of_request",
+          "kind": "textarea",
+          "label": "Purpose of request",
+          "required": true,
+          "validation": { "minLength": 1, "message": "State the purpose of the request." }
+        }
+      ]
+    },
+
+    {
+      "id": "details",
+      "title": "6. Details of Request",
+      "fields": [
+        {
+          "id": "details_of_request",
+          "kind": "textarea",
+          "label": "Details of request",
+          "required": true,
+          "validation": { "minLength": 1, "message": "Give the details of the request." }
+        }
+      ]
+    },
+
+    {
+      "id": "signature",
+      "title": "7. To be signed by applicant",
+      "fields": [
+        { "id": "signature", "kind": "signature", "label": "Signature", "required": true }
+      ]
+    },
+
+    {
+      "id": "signatory",
+      "title": "8. Name of the natural person who has signed along with designation and official seal, if any.",
+      "fields": [
+        {
+          "id": "signatory_name",
+          "kind": "text",
+          "label": "Name of the natural person who has signed",
+          "required": true,
+          "validation": { "minLength": 2, "message": "Enter the full name of the natural person who signed." },
+          "autofill": {
+            "strategy": "direct",
+            "sources": [
+              { "sourceType": "form26_authorisation", "key": "agent.name" },
+              { "sourceType": "form1", "key": "signatory.name" }
+            ],
+            "confidence": "medium"
+          }
+        },
+        { "id": "designation", "kind": "text", "label": "Designation", "required": false },
+        { "id": "official_seal", "kind": "text", "label": "Official seal (if any)", "required": false }
+      ]
+    },
+
+    {
+      "id": "addressee",
+      "title": "To",
+      "fields": [
+        {
+          "id": "addressee_boilerplate",
+          "kind": "boilerplate",
+          "text": "To,\nThe Controller of Patents,\nThe Patent Office,\nat",
+          "export": { "verbatim": true },
+          "presentation": { "group": "addressee" }
+        },
+        {
+          "id": "patent_office",
+          "kind": "dropdown",
+          "label": "at (Patent Office)",
+          "format": "patentOffice",
+          "required": true,
+          "selection": "single",
+          "options": [
+            { "value": "delhi", "label": "Delhi" },
+            { "value": "mumbai", "label": "Mumbai" },
+            { "value": "chennai", "label": "Chennai" },
+            { "value": "kolkata", "label": "Kolkata" }
+          ],
+          "autofill": {
+            "strategy": "derived",
+            "derivation": "Jurisdictional patent office based on the applicant's address or the office recorded on Form 1.",
+            "confidence": "medium"
+          },
+          "presentation": { "group": "addressee", "multiline": false }
+        }
+      ]
+    }
+  ],
+
+  "notes": [
+    "Note. - Strike out whichever is not applicable (Applicant/Patentee/Other, Application No./Patent No.).",
+    "Catch-all form: use only when no specific form fits. The relevant section/rules, purpose and details fields carry the substance.",
+    "No fee note is printed on the face; the applicable fee (if any) depends on the underlying request — check the First Schedule for the specific action.",
+    "No 'Dated this...' line is printed on Form 30; the signing date is recorded at application level, not as a printed field.",
+    "The purpose and details fields are deliberately not pre-filled with canned text — the whole point is that the request is bespoke. Only identity, address and number fields are auto-filled."
+  ],
+
+  "metadata": {
+    "sourcePdf": "docs/Form_30.PDF",
+    "transcribedFrom": "docs/specifications/form_30.md",
+    "status": "draft",
+    "authoredFrom": "docs/specifications/patterns/patterns.json",
+    "printedHeader": {
+      "formTitle": "FORM 30",
+      "statute": "THE PATENTS ACT, 1970 (39 of 1970) and THE PATENTS RULES, 2003",
+      "subject": "TO BE USED WHEN NO OTHER FORM IS PRESCRIBED",
+      "citation": "(See rule 8, sub-rule (2))"
+    }
+  }
+}
