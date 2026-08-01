@@ -11,7 +11,7 @@ import unittest
 
 import context  # noqa: F401  — sets sys.path
 
-from extractor.classifier import DocumentClassifier
+from extractor.classifier import _ANCHORS, DocumentClassifier
 from extractor.pdf_reader import PDFReader
 from models.patent_profile import DocumentType
 
@@ -59,13 +59,70 @@ class TestOtherDocumentTypes(unittest.TestCase):
         cases = [
             ("STATEMENT AND UNDERTAKING UNDER SECTION 8", DocumentType.FORM3),
             ("COMPLETE SPECIFICATION", DocumentType.FORM2_SPECIFICATION),
+            ("PROVISIONAL SPECIFICATION", DocumentType.FORM2_SPECIFICATION),
             ("DECLARATION AS TO INVENTORSHIP", DocumentType.FORM5),
             ("PATENT CERTIFICATE", DocumentType.PATENT_CERTIFICATE),
             ("PRIORITY DOCUMENT", DocumentType.PRIORITY_DOCUMENT),
+            ("FORM FOR AUTHORISATION OF A PATENT AGENT",
+             DocumentType.FORM26_AUTHORISATION),
+            ("POWER OF ATTORNEY", DocumentType.FORM26_AUTHORISATION),
+            ("DEED OF ASSIGNMENT", DocumentType.ASSIGNMENT_DOCUMENT),
+            ("PATENT COOPERATION TREATY", DocumentType.PCT_DOCUMENT),
+            ("APPLICATION FOR REGISTRATION OF TITLE",
+             DocumentType.FORM16_REGISTRATION),
+            ("TO BE SUBMITTED BY A SMALL ENTITY", DocumentType.FORM28),
+            ("PATENT OFFICE JOURNAL", DocumentType.PUBLICATION_RECORD),
         ]
         for text, expected in cases:
             with self.subTest(text=text):
                 self.assertEqual(expected, self.classifier.classify(text))
+
+    def test_every_registered_extractor_has_a_reachable_classification(self):
+        """An extractor keyed to a DocumentType the classifier cannot produce is
+        dead code that looks live."""
+        from extractor.profile_builder import _EXTRACTOR_REGISTRY
+
+        anchored = {doc_type for doc_type, _ in _ANCHORS}
+        for doc_type in _EXTRACTOR_REGISTRY:
+            with self.subTest(document_type=doc_type):
+                self.assertIn(doc_type, anchored, "no classifier anchors for this type")
+
+
+class TestAnchorPrecedence(unittest.TestCase):
+    """Anchor ORDER decides which extractor runs; these pin the cases where two
+    document types legitimately contain each other's anchor phrases."""
+
+    def setUp(self):
+        self.classifier = DocumentClassifier()
+
+    def test_form5_wins_over_the_specification_anchor_it_contains(self):
+        """Regression: Form 5's operative sentence says "…disclosed in the
+        complete specification filed in pursuance of…", so with FORM2 checked
+        first every Form 5 classified as a specification and its inventor
+        declarations — the most authoritative inventor source we have — were
+        never extracted."""
+        text = (
+            "FORM 5\nTHE PATENTS ACT, 1970\nDECLARATION AS TO INVENTORSHIP\n"
+            "I/We hereby declare that the true and first inventors of the invention "
+            "disclosed in the complete specification filed in pursuance of my "
+            "application are as follows"
+        )
+        self.assertEqual(DocumentType.FORM5, self.classifier.classify(text))
+
+    def test_form1_number_anchor_does_not_swallow_forms_16_and_26(self):
+        self.assertEqual(
+            DocumentType.FORM16_REGISTRATION, self.classifier.classify("FORM 16")
+        )
+        self.assertEqual(
+            DocumentType.FORM26_AUTHORISATION, self.classifier.classify("FORM 26")
+        )
+
+    def test_a_pct_document_is_not_read_as_a_generic_certified_copy(self):
+        text = (
+            "PATENT COOPERATION TREATY\nCERTIFIED COPY\n"
+            "International Application No.: PCT/IN2019/050123"
+        )
+        self.assertEqual(DocumentType.PCT_DOCUMENT, self.classifier.classify(text))
 
 
 class TestUnknownFallback(unittest.TestCase):

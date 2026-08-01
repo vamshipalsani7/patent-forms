@@ -114,7 +114,7 @@ describe("documentUpload — ingestion stamps the workspace", () => {
   let ns, uploadCalls;
 
   beforeEach(() => {
-    const env = bootstrap("pdfValidation.js", "documentStore.js");
+    const env = bootstrap("fileValidation.js", "documentStore.js");
     ns = env.ns;
 
     // Stub the extraction client: ingestion fires it, but the network round
@@ -157,12 +157,25 @@ describe("documentUpload — ingestion stamps the workspace", () => {
     );
   });
 
-  test("rejects a non-PDF and does not store it", () => {
+  test("accepts a Word document, not only a PDF", () => {
+    const result = ns.documentUpload.ingestFiles([
+      { name: "specification.docx", size: 4096, type: "" },
+    ]);
+    assert.equal(result.accepted.length, 1);
+    assert.equal(result.rejected.length, 0);
+  });
+
+  test("accepts a plain-text source document", () => {
     const result = ns.documentUpload.ingestFiles([{ name: "notes.txt", size: 10, type: "text/plain" }]);
+    assert.equal(result.accepted.length, 1);
+  });
+
+  test("rejects an unsupported file type and does not store it", () => {
+    const result = ns.documentUpload.ingestFiles([{ name: "sheet.xlsx", size: 10, type: "" }]);
 
     assert.equal(result.accepted.length, 0);
     assert.equal(result.rejected.length, 1);
-    assert.match(result.rejected[0].reason, /PDF/i);
+    assert.match(result.rejected[0].reason, /PDF|DOCX|DOC|TXT/i);
     assert.deepEqual(ns.documentStore.list(), []);
   });
 
@@ -184,7 +197,7 @@ describe("documentUpload — ingestion stamps the workspace", () => {
   });
 
   test("does not send rejected files for extraction", () => {
-    ns.documentUpload.ingestFiles([{ name: "notes.txt", size: 10, type: "text/plain" }]);
+    ns.documentUpload.ingestFiles([{ name: "sheet.xlsx", size: 10, type: "" }]);
     assert.equal(uploadCalls.length, 0);
   });
 
@@ -192,9 +205,12 @@ describe("documentUpload — ingestion stamps the workspace", () => {
     ns.documentUpload.ingestFiles([pdf()]);
     const stored = JSON.parse(globalThis.localStorage.getItem("patentforms.documents"));
 
+    // Extraction-status fields are metadata about the document, not its bytes;
+    // no field here holds file contents (no base64, no arrayBuffer).
     assert.deepEqual(
       Object.keys(stored[0]).sort(),
-      ["displayTitle", "id", "originalFilename", "size", "uploadedAt", "workspaceId"],
+      ["detectedType", "detectedTypeLabel", "displayTitle", "extractionStatus",
+       "factCount", "id", "originalFilename", "size", "uploadedAt", "workspaceId"],
     );
   });
 
@@ -247,6 +263,19 @@ describe("extractionClient — the workspace travels with every request", () => 
     assert.ok(!requests[0].url.includes("&c="), "an unencoded id could forge a query parameter");
   });
 
+  test("the user's workspace decisions travel with the suggestions request", async () => {
+    await ns.extractionClient.getSuggestions("form_01", "ws", { "invention.title": "Chosen Title" });
+    const url = requests[0].url;
+    assert.match(url, /overrides=/);
+    const value = decodeURIComponent(url.split("overrides=")[1]);
+    assert.deepEqual(JSON.parse(value), { "invention.title": "Chosen Title" });
+  });
+
+  test("no overrides parameter is sent when there are no decisions", async () => {
+    await ns.extractionClient.getSuggestions("form_01", "ws", {});
+    assert.ok(!requests[0].url.includes("overrides="), "empty decisions must not add the param");
+  });
+
   test("a failed request still reports which workspace it was for", async () => {
     globalThis.fetch = () => Promise.reject(new Error("backend offline"));
     const result = await ns.extractionClient.getSuggestions("form_03", "patent_a");
@@ -297,7 +326,7 @@ describe("documentStore — the default workspace is shared, not duplicated", ()
   });
 
   test("ingest stamps documents with exactly that workspace", () => {
-    const env = bootstrap("pdfValidation.js", "documentStore.js");
+    const env = bootstrap("fileValidation.js", "documentStore.js");
     env.ns.extractionClient = { uploadForExtraction: () => Promise.resolve(null) };
     loadAppScript("documentUpload.js");
 
@@ -308,7 +337,7 @@ describe("documentStore — the default workspace is shared, not duplicated", ()
   });
 
   test("the workspace sent for extraction matches the one stored", () => {
-    const env = bootstrap("pdfValidation.js", "documentStore.js");
+    const env = bootstrap("fileValidation.js", "documentStore.js");
     const sent = [];
     env.ns.extractionClient = {
       uploadForExtraction: (id, file, workspaceId) => {

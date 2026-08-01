@@ -280,15 +280,29 @@ class TestAtomicityPreconditions(AtomicWriteTestCase):
         self.assertEqual(["fsync", "replace"], calls)
 
     def test_both_write_paths_go_through_the_atomic_helper(self):
-        """Neither save_pdf nor save_extract may write in place."""
+        """The document and extract write paths must never write in place.
+
+        save_pdf is now a thin wrapper over save_document (the .pdf special
+        case), so the atomic write it must not bypass lives in save_document —
+        the method actually put to disk here.
+        """
         import inspect
 
-        for method in (ContentStore.save_pdf, ContentStore.save_extract):
+        for method in (ContentStore.save_document, ContentStore.save_extract):
             with self.subTest(method=method.__name__):
                 body = inspect.getsource(method)
                 self.assertIn("_atomic_write_bytes", body)
                 self.assertNotIn("write_bytes(", body.replace("_atomic_write_bytes", ""))
                 self.assertNotIn("write_text(", body)
+
+    def test_save_pdf_delegates_to_the_atomic_document_writer(self):
+        """The .pdf wrapper must route through save_document, not reintroduce a
+        second, possibly non-atomic, write path."""
+        import inspect
+
+        body = inspect.getsource(ContentStore.save_pdf)
+        self.assertIn("save_document", body)
+        self.assertNotIn("_atomic_write_bytes", body, "wrapper should not write directly")
 
 
 if __name__ == "__main__":

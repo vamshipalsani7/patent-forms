@@ -41,6 +41,11 @@ _SAFE_IDENTIFIER = re.compile(r"^[A-Za-z0-9_-]{1,128}$")
 
 _EXTRACT_SUFFIX = ".extract.json"
 
+# A stored document's file extension. Restricted so a suffix can never carry a
+# path separator or traversal into the filename — the document id is already
+# validated, and this closes the same door on the extension.
+_SAFE_SUFFIX = re.compile(r"^\.[A-Za-z0-9]{1,8}$")
+
 # In-progress writes. The suffix deliberately does not end in '.extract.json',
 # so a temp file can never be mistaken for a document by the startup scan.
 _TEMP_PREFIX = ".tmp-"
@@ -162,17 +167,33 @@ class ContentStore:
 
     # ----------------------------------------------------------------- write
 
-    def save_pdf(self, workspace_id: str, document_id: str, data: bytes) -> Path:
-        """Write PDF bytes into the workspace's directory; return the path.
+    def save_document(
+        self, workspace_id: str, document_id: str, data: bytes, suffix: str = ".pdf"
+    ) -> Path:
+        """Write a document's bytes into the workspace, keyed by its real type.
+
+        The stored file keeps its true extension (``.pdf``, ``.docx``, ``.txt``,
+        ``.doc``) so the on-disk name never lies about what the bytes are — the
+        thing that would otherwise send a Word file to the PDF reader on a later
+        read. ``save_pdf`` is the ``.pdf`` special case, preserved for callers
+        and tests that predate multi-format support.
 
         Atomic: re-uploading over an existing document either fully succeeds or
-        leaves the previous bytes intact. The PDFs are the only true source in
-        this architecture — everything else is rebuildable from them — so a
-        half-overwritten PDF is the one loss that could not be recovered.
+        leaves the previous bytes intact. The uploaded documents are the only
+        true source in this architecture — everything else is rebuildable from
+        them — so a half-overwritten document is the one loss not recoverable.
         """
-        path = self._document_path(workspace_id, document_id, ".pdf")
+        if not _SAFE_SUFFIX.match(suffix):
+            raise UnsafeIdentifierError(
+                f"document suffix must be a short dotted extension; got {suffix!r}"
+            )
+        path = self._document_path(workspace_id, document_id, suffix)
         _atomic_write_bytes(path, data)
         return path
+
+    def save_pdf(self, workspace_id: str, document_id: str, data: bytes) -> Path:
+        """Write PDF bytes into the workspace's directory; return the path."""
+        return self.save_document(workspace_id, document_id, data, ".pdf")
 
     def save_extract(self, extract: DocumentExtract) -> None:
         """Persist a DocumentExtract into the workspace it declares.
@@ -191,10 +212,20 @@ class ContentStore:
 
     # ------------------------------------------------------------------ read
 
+    def get_document_path(
+        self, workspace_id: str, document_id: str, suffix: str
+    ) -> Optional[Path]:
+        """Path to a stored document of the given type, or None if absent."""
+        if not _SAFE_SUFFIX.match(suffix):
+            raise UnsafeIdentifierError(
+                f"document suffix must be a short dotted extension; got {suffix!r}"
+            )
+        path = self._document_path(workspace_id, document_id, suffix)
+        return path if path.exists() else None
+
     def get_pdf_path(self, workspace_id: str, document_id: str) -> Optional[Path]:
         """Path to a document's PDF, or None if that workspace has no such document."""
-        path = self._document_path(workspace_id, document_id, ".pdf")
-        return path if path.exists() else None
+        return self.get_document_path(workspace_id, document_id, ".pdf")
 
     def get_extract(self, workspace_id: str, document_id: str) -> Optional[DocumentExtract]:
         """One document's extract, or None if it is not in this workspace."""

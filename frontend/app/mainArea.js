@@ -25,6 +25,11 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   /** Return the source description string from a fact object. */
   function provenanceLabel(fact) {
     if (!fact) return "";
+    // A value the user decided themselves in the Patent Workspace — not an
+    // extraction — is shown as their own, not as a document with a confidence.
+    if (fact.source_type === "user" || fact.method === "manual") {
+      return "Entered by you";
+    }
     var parts = [];
     if (fact.source_type) parts.push(fact.source_type);
     if (fact.page != null) parts.push("p." + fact.page);
@@ -34,9 +39,24 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return parts.join(" · ");
   }
 
+  /**
+   * Paths the user should see listed as auto-filled.
+   *
+   * Structural suggestions (a repeatable group's `path#count`) travel on the
+   * same channel because that is how state reaches the renderer, but they are
+   * renderer bookkeeping rather than an extracted value. Listing them would
+   * show the user a "field" called `inventors.inventor#count` with a value of
+   * 2 and inflate the auto-filled count.
+   */
+  function userVisiblePaths(suggestions) {
+    return Object.keys(suggestions || {}).filter(function (path) {
+      return !suggestions[path].structural;
+    });
+  }
+
   /** Build a collapsible provenance banner for auto-filled fields. */
   function buildProvenanceBanner(suggestions) {
-    var paths = Object.keys(suggestions || {});
+    var paths = userVisiblePaths(suggestions);
     if (!paths.length) return null;
 
     var banner = el("div", "provenance-banner");
@@ -104,9 +124,22 @@ window.PatentFormsApp = window.PatentFormsApp || {};
       clear();
       var wrap = el("div", "welcome");
       wrap.appendChild(el("h1", null, "Patent Forms"));
-      wrap.appendChild(el("p", "welcome-sub", "Prepare Indian Patent Office forms quickly and accurately."));
-      wrap.appendChild(el("p", "welcome-hint", "Select a form from the left to begin."));
+      wrap.appendChild(el("p", "welcome-sub", "From patent documents to a filing-ready IPO form."));
+      wrap.appendChild(el("p", "welcome-hint", "Upload your patent documents on the left to begin."));
       root.appendChild(wrap);
+    }
+
+    /**
+     * Render the Patent Workspace — the consolidated view of the matter. This
+     * is the application's home screen once any document exists; its own empty
+     * state covers the no-documents case, so app.js can always call it.
+     *
+     * @param {object} summary  the /api/workspace response
+     * @param {object} [opts]    { workspaceId, onChooseForm }
+     */
+    function showWorkspace(summary, opts) {
+      clear();
+      ns.workspaceView.render(root, summary, opts);
     }
 
     function showLoading(meta) {
@@ -122,8 +155,8 @@ window.PatentFormsApp = window.PatentFormsApp || {};
       var wrap = el("div", "state-panel state-unavailable");
       wrap.appendChild(el("div", "state-title", "Form " + meta.formNumber + " — " + meta.officialName));
       wrap.appendChild(el("div", "state-body",
-        "A JSON definition for this form has not been authored yet, so it can't be opened. " +
-        "Only Form 3 currently has a definition (docs/specifications/definitions/form_03.definition.json)."));
+        "This form could not be opened. Its definition may be missing or failed to load. " +
+        "You can go back to the Patent Workspace and try another form."));
       wrap.appendChild(el("div", "state-detail", error && error.message ? error.message : String(error)));
       root.appendChild(wrap);
     }
@@ -241,6 +274,7 @@ window.PatentFormsApp = window.PatentFormsApp || {};
 
     return {
       showWelcome: showWelcome,
+      showWorkspace: showWorkspace,
       showLoading: showLoading,
       showUnavailable: showUnavailable,
       showForm: showForm

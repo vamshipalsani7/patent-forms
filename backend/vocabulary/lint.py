@@ -21,9 +21,16 @@ from pathlib import Path
 # --- paths -------------------------------------------------------------------
 
 _HERE = Path(__file__).parent
-_PROJECT_ROOT = _HERE.parent.parent
+_BACKEND_DIR = _HERE.parent
+_PROJECT_ROOT = _BACKEND_DIR.parent
 _REGISTRY_PATH = _HERE / "registry.json"
 _DEFINITIONS_DIR = _PROJECT_ROOT / "docs" / "specifications" / "definitions"
+
+# Running this file directly puts backend/vocabulary/ on sys.path, not backend/,
+# so `from models...` would fail. Backend modules import each other as top-level
+# packages (the way uvicorn runs them), so backend/ has to be the import root.
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
 
 
 def load_registry() -> dict:
@@ -139,6 +146,61 @@ def lint_file(path: Path, registry: dict) -> list[LintError]:
     return errors
 
 
+def lint_source_type_coverage(registry: dict) -> list[LintError]:
+    """Check registry sourceTypes and DocumentType members agree, both ways.
+
+    This is a whole-vocabulary rule, not a per-definition one, so it runs once
+    rather than per file.
+
+    Why both directions matter:
+      * registry sourceType with no DocumentType member — UNREACHABLE. The
+        classifier can only emit enum members, so every autofill source citing
+        that sourceType silently never matches. Nothing else in the codebase
+        notices; autofill just quietly returns fewer suggestions.
+      * DocumentType member with no registry sourceType — UNSPENDABLE. The
+        classifier can produce it and an extractor can stamp it onto
+        Fact.source_type, but no definition may legally reference it, so the
+        facts are dead on arrival.
+
+    Both failures look identical from the UI: correct-looking extraction, no
+    suggestion. That is why they are lint errors rather than runtime warnings.
+    """
+    from models.patent_profile import DocumentType
+
+    # GENERIC and UNKNOWN describe how a document was processed, not what it is.
+    # They are deliberately absent from the registry.
+    processing_states = {DocumentType.GENERIC, DocumentType.UNKNOWN}
+
+    registered = set(registry["sourceTypes"])
+    classifiable = {m.value for m in DocumentType if m not in processing_states}
+
+    errors: list[LintError] = []
+
+    for source_type in sorted(registered - classifiable):
+        errors.append(LintError(
+            "(vocabulary)", f"sourceTypes.{source_type}",
+            "UNREACHABLE_SOURCE_TYPE",
+            f"sourceType '{source_type}' has no DocumentType member, so the "
+            f"classifier can never emit it and every autofill source citing it "
+            f"is dead.",
+            f"Add a DocumentType member with value '{source_type}' in "
+            f"models/patent_profile.py, and anchors for it in "
+            f"extractor/classifier.py.",
+        ))
+
+    for value in sorted(classifiable - registered):
+        errors.append(LintError(
+            "(vocabulary)", f"DocumentType.{value}",
+            "UNSPENDABLE_DOCUMENT_TYPE",
+            f"DocumentType '{value}' is not a registry sourceType, so no form "
+            f"definition may reference facts extracted from it.",
+            f"Add '{value}' to sourceTypes in registry.json, or remove the "
+            f"enum member.",
+        ))
+
+    return errors
+
+
 # --- entry point -------------------------------------------------------------
 
 def main(argv: list[str] = sys.argv[1:]) -> int:
@@ -150,6 +212,18 @@ def main(argv: list[str] = sys.argv[1:]) -> int:
         return 1
 
     total_errors = 0
+
+    # Whole-vocabulary rules run once, before the per-definition pass — a
+    # coverage gap explains failures the per-file output cannot.
+    coverage_errors = lint_source_type_coverage(registry)
+    if coverage_errors:
+        print("\nFAIL  vocabulary/DocumentType coverage")
+        for e in coverage_errors:
+            print(e)
+        total_errors += len(coverage_errors)
+    else:
+        print("OK    vocabulary/DocumentType coverage")
+
     for path in sorted(files):
         errors = lint_file(path, registry)
         if errors:

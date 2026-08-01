@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import asyncio
 import io
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -152,16 +153,43 @@ class TestContentStore(IsolatedStoreTestCase):
 
 
 class TestExtractEndpointGuards(IsolatedStoreTestCase):
-    def test_rejects_a_non_pdf_content_type(self):
+    def test_rejects_an_unsupported_file_type(self):
+        """The type is decided by extension; an unsupported one is refused."""
         upload = UploadFile(
-            file=io.BytesIO(b"plain text"), filename="notes.txt",
-            headers={"content-type": "text/plain"},
+            file=io.BytesIO(b"<xml/>"), filename="drawing.rtf",
+            headers={"content-type": "application/rtf"},
         )
         with self.assertRaises(HTTPException) as caught:
             asyncio.run(app_module.extract_document(
                 file=upload, document_id="d1", workspace_id=WORKSPACE,
             ))
         self.assertEqual(400, caught.exception.status_code)
+
+    def test_accepts_a_supported_non_pdf_type(self):
+        """A .txt source document is now accepted, not rejected — content type
+        is advisory, the extension is the authority."""
+        upload = UploadFile(
+            file=io.BytesIO(b"COMPLETE SPECIFICATION\nApplication No. : 202211012345"),
+            filename="notes.txt", headers={"content-type": "text/plain"},
+        )
+        result = asyncio.run(app_module.extract_document(
+            file=upload, document_id="d_txt", workspace_id=WORKSPACE,
+        ))
+        self.assertEqual("d_txt", result["document_id"])
+        self.assertNotIn("error", result)
+
+    def test_content_type_is_advisory_not_authoritative(self):
+        """A real PDF whose browser-reported content type is wrong (or blank)
+        must still be processed by its extension."""
+        upload = UploadFile(
+            file=io.BytesIO(b"%PDF-1.4 not really a pdf"), filename="spec.pdf",
+            headers={"content-type": "application/octet-stream"},
+        )
+        result = asyncio.run(app_module.extract_document(
+            file=upload, document_id="d_pdf", workspace_id=WORKSPACE,
+        ))
+        # It is accepted (no 400); extraction may still find nothing, which is fine.
+        self.assertEqual("d_pdf", result["document_id"])
 
     def test_rejects_an_empty_upload(self):
         upload = UploadFile(
@@ -187,6 +215,133 @@ class TestExtractEndpointGuards(IsolatedStoreTestCase):
         self.assertIn("error", result)
         self.assertEqual([], result["facts"])
         self.assertEqual("d_broken", result["document_id"])
+
+
+class TestSuggestionsOverrides(IsolatedStoreTestCase):
+    """The suggestions endpoint carries the user's Workspace decisions through
+    to the generated form via the optional `overrides` JSON param."""
+
+    def _title_suggestion(self, result):
+        for path, s in result["suggestions"].items():
+            if path.endswith("invention_title") or path.endswith(".invention.title"):
+                return s
+        return None
+
+    def test_a_resolved_conflict_reaches_the_form(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "Spec Title", source_type="form2_specification"),
+            source_type="form2_specification",
+        ))
+        self.store.save_extract(_extract(
+            "cert", _fact("invention.title", "Certificate Title", source_type="patent_certificate"),
+            source_type="patent_certificate",
+        ))
+
+        overrides = json.dumps({"invention.title": "Certificate Title"})
+        result = app_module.get_suggestions("form_01", workspace_id=WORKSPACE, overrides=overrides)
+        s = self._title_suggestion(result)
+        self.assertIsNotNone(s)
+        self.assertEqual("Certificate Title", s["value"])
+
+    def test_a_typed_value_reaches_the_form_as_user_provided(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "A Title", source_type="form2_specification"),
+            source_type="form2_specification",
+        ))
+        overrides = json.dumps({"applicant.nationality": "Indian"})
+        result = app_module.get_suggestions("form_01", workspace_id=WORKSPACE, overrides=overrides)
+
+        provided = [
+            s for s in result["suggestions"].values()
+            if s["value"] == "Indian" and s["fact"]["source_type"] == "user"
+        ]
+        self.assertTrue(provided, "the typed nationality did not reach the form")
+
+    def test_malformed_overrides_are_ignored_not_fatal(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "A Title", source_type="form2_specification"),
+            source_type="form2_specification",
+        ))
+        # Not JSON at all — the form must still generate from the extractions.
+        result = app_module.get_suggestions("form_01", workspace_id=WORKSPACE, overrides="{not json")
+        self.assertIn("suggestions", result)
+        self.assertTrue(result["suggestions"])
+
+    def test_no_overrides_param_is_the_prior_behaviour(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "A Title", source_type="form2_specification"),
+            source_type="form2_specification",
+        ))
+        result = app_module.get_suggestions("form_01", workspace_id=WORKSPACE)
+        self.assertIn("suggestions", result)
+
+
+class TestWorkspaceEndpoint(IsolatedStoreTestCase):
+    """GET /api/workspace/{id} — the Patent Workspace's data source."""
+
+    def test_summarises_the_workspaces_documents_and_facts(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "A Widget"),
+            _fact("applicant.name", "Acme Ltd"), source_type="form2_specification",
+        ))
+        summary = app_module.get_workspace(WORKSPACE)
+
+        self.assertEqual(WORKSPACE, summary["workspace_id"])
+        self.assertEqual(1, summary["stats"]["document_count"])
+        section_ids = [s["id"] for s in summary["sections"]]
+        self.assertIn("title", section_ids)
+        self.assertIn("applicants", section_ids)
+
+    def test_is_scoped_to_one_workspace(self):
+        self.store.save_extract(_extract("a", _fact("applicant.name", "Company A"),
+                                         workspace_id="patent_a"))
+        self.store.save_extract(_extract("b", _fact("applicant.name", "Company B"),
+                                         workspace_id="patent_b"))
+
+        summary_a = app_module.get_workspace("patent_a")
+        self.assertEqual(1, summary_a["stats"]["document_count"])
+        names = [
+            v["value"]
+            for s in summary_a["sections"] if s["id"] == "applicants"
+            for f in s["fields"] for v in f["values"]
+        ]
+        self.assertIn("Company A", names)
+        self.assertNotIn("Company B", names)
+
+    def test_an_empty_workspace_is_well_formed(self):
+        summary = app_module.get_workspace("never_used_ws")
+        self.assertEqual([], summary["documents"])
+        self.assertEqual([], summary["sections"])
+        self.assertTrue(summary["missing"], "core fields should be reported missing")
+
+    def test_a_bad_workspace_id_is_rejected(self):
+        with self.assertRaises(HTTPException) as caught:
+            app_module.get_workspace("../escape")
+        self.assertEqual(400, caught.exception.status_code)
+
+    def test_an_uploaded_docx_reaches_the_summary_with_a_friendly_type(self):
+        """End to end: a Word document, uploaded through the real endpoint,
+        appears in the workspace with a human type label — no PDF required."""
+        import docx
+
+        tmp = Path(self._tmp.name) / "poa.docx"
+        document = docx.Document()
+        document.add_paragraph("FORM 26")
+        document.add_paragraph("FORM FOR AUTHORISATION OF A PATENT AGENT")
+        document.add_paragraph(
+            "I/We, Acme Ltd, do hereby authorise Shri RAJESH KUMAR, IN/PA-1234, to act."
+        )
+        document.save(tmp)
+
+        result = self.upload("d_docx", tmp, filename="poa.docx", content_type="")
+        self.assertEqual("form26_authorisation", result["source_type"])
+        self.assertEqual("Form 26 (Authorisation of Agent)", result["source_type_label"])
+
+        summary = app_module.get_workspace(WORKSPACE)
+        doc = summary["documents"][0]
+        self.assertEqual("poa.docx", doc["filename"])
+        self.assertEqual("Form 26 (Authorisation of Agent)", doc["document_type"])
+        self.assertEqual("extracted", doc["status"])
 
 
 class TestWorkspaceScopingBoundary(IsolatedStoreTestCase):

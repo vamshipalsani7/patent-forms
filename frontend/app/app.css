@@ -108,8 +108,28 @@ body {
 }
 .form-item:hover { background: #1f2937; }
 .form-item.active { background: #1e3a5f; border-left-color: var(--sidebar-active); }
-.form-item-number { font-size: 12px; font-weight: 700; color: #93c5fd; }
+.form-item-action { font-size: 12.5px; font-weight: 600; color: #e5e7eb; }
+.form-item-number { font-size: 11px; color: #93c5fd; margin-top: 1px; }
 .form-item-name { font-size: 12.5px; color: #d1d5db; margin-top: 1px; }
+
+/* Patent Workspace home button, above the forms search */
+.workspace-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  background: #17233a;
+  border: none;
+  border-left: 3px solid var(--sidebar-active);
+  color: #e5e7eb;
+  padding: 10px 14px;
+  cursor: pointer;
+  font: inherit;
+}
+.workspace-nav:hover { background: #1e3a5f; }
+.workspace-nav-icon { font-size: 14px; }
+.workspace-nav-label { font-size: 13px; font-weight: 600; }
 
 /* ---------------- main area ---------------- */
 #main { flex: 1; overflow-y: auto; background: var(--main-bg); }
@@ -188,9 +208,48 @@ body {
 .upload-zone:hover { border-color: #4b5563; }
 .upload-zone:focus { outline: 2px solid var(--sidebar-active); outline-offset: 2px; }
 .upload-zone.dragover { border-color: var(--sidebar-active); background: #17233a; color: #e5e7eb; }
+.upload-zone-hint { font-size: 10.5px; color: #6b7280; margin-top: 4px; letter-spacing: .04em; }
+
+/* Per-document detected type + status in the sidebar list */
+.document-type { font-size: 11px; color: #93c5fd; margin-top: 2px; }
+.doc-status {
+  display: inline-block;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+}
+.doc-status-ok { background: #06371f; color: #6ee7b7; border-color: #0f5132; }
+.doc-status-warn { background: #3a2a06; color: #fcd34d; border-color: #92660f; }
+.doc-status-err { background: #3a0d0d; color: #fca5a5; border-color: #7f1d1d; }
+.doc-status-pending { background: #1f2937; color: #9ca3af; border-color: #374151; }
+.document-size { color: var(--sidebar-muted); }
 
 .upload-feedback { padding: 0 14px; flex-shrink: 0; }
 .upload-reject { font-size: 11.5px; color: #fca5a5; margin: 4px 0 0; }
+.upload-note { font-size: 11.5px; color: #6ee7b7; margin: 4px 0 0; }
+
+/* Inline rename + two-step remove in the document list */
+.doc-rename-input {
+  width: 100%;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--sidebar-active);
+  background: #1f2937;
+  color: #f3f4f6;
+  font: inherit;
+  font-size: 12.5px;
+}
+.document-confirm { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.document-confirm-q { font-size: 11px; color: #fcd34d; margin-right: 2px; }
+.document-confirm .icon-btn {
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid #374151;
+  border-radius: 4px;
+}
+.document-confirm .icon-btn.danger { color: #fca5a5; border-color: #7f1d1d; }
 
 .document-list { overflow-y: auto; padding: 2px 0 10px; flex: 1 1 auto; min-height: 0; }
 .document-list-empty { padding: 8px 14px 12px; font-size: 12.5px; color: var(--sidebar-muted); }
@@ -283,3 +342,162 @@ body {
   font-size: 11px;
   flex-shrink: 0;
 }
+
+/* ================= Patent Workspace ================= */
+.wsp { max-width: 860px; margin: 0 auto; padding: 24px 28px 60px; }
+
+.wsp-header { margin-bottom: 18px; }
+.wsp-title { font-size: 26px; margin: 0 0 6px; }
+.wsp-subtitle { color: #4b5563; font-size: 14px; margin: 0 0 14px; max-width: 640px; }
+
+.wsp-stats { display: flex; flex-wrap: wrap; gap: 18px; }
+.wsp-stat { font-size: 13px; color: #374151; }
+.wsp-stat-n { font-size: 18px; font-weight: 700; color: #111827; }
+.wsp-stat-l { color: #6b7280; }
+.wsp-stat-warn .wsp-stat-n { color: #b45309; }
+.wsp-stat-muted .wsp-stat-n { color: #6b7280; }
+
+.wsp-review-banner {
+  margin: 14px 0 4px;
+  padding: 10px 14px;
+  background: #fffaf0;
+  border: 1px solid #f0c36d;
+  border-radius: 8px;
+  color: #92660f;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.wsp-section {
+  background: #fff;
+  border: 1px solid #e2e5ea;
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+.wsp-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #6b7280;
+  margin: 0 0 12px;
+}
+
+.wsp-field { padding: 8px 0; border-top: 1px solid #f1f2f4; }
+.wsp-field:first-of-type { border-top: none; }
+.wsp-field-head { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.wsp-field-label { font-size: 13px; font-weight: 600; color: #374151; }
+.wsp-field-conflict { background: #fffaf0; border-radius: 8px; padding: 10px; margin: 6px 0; border-top: none; }
+
+.wsp-flag { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 10px; }
+.wsp-flag-review { background: #fef3c7; color: #92400e; }
+.wsp-flag-resolved { background: #d1fae5; color: #065f46; }
+
+.wsp-value { padding: 2px 0; }
+.wsp-value-text { font-size: 14px; color: #111827; }
+.wsp-value-src { font-size: 11.5px; color: #8a92a0; margin-top: 1px; }
+
+.wsp-conflict-note { font-size: 12px; color: #92660f; margin: 2px 0 8px; }
+.wsp-conflict-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid #e6d9b8;
+  border-radius: 8px;
+  background: #fff;
+  margin-top: 6px;
+}
+.wsp-conflict-opt.chosen { border-color: #34d399; background: #f0fdf4; }
+.wsp-conflict-body { min-width: 0; }
+
+/* "Change" link on a resolved conflict */
+.wsp-linkbtn {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 0 0;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.wsp-linkbtn:hover { color: #1a5fd0; }
+
+/* Inline value entry for a missing field */
+.wsp-inline-input {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  font: inherit;
+  font-size: 14px;
+  margin-top: 4px;
+}
+.wsp-inline-actions { display: flex; gap: 6px; flex-shrink: 0; align-items: flex-start; }
+.wsp-missing-item.editing { align-items: flex-start; }
+
+.wsp-missing { border-color: #e2e5ea; }
+.wsp-missing-note { font-size: 12.5px; color: #6b7280; margin: -4px 0 10px; }
+.wsp-missing-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid #f1f2f4;
+}
+.wsp-missing-item:first-of-type { border-top: none; }
+.wsp-missing-item.provided .wsp-field-label { color: #065f46; }
+.wsp-missing-info { min-width: 0; }
+.wsp-missing-empty { font-size: 12.5px; color: #9ca3af; margin-top: 2px; }
+
+.wsp-doc-list { display: flex; flex-direction: column; gap: 8px; }
+.wsp-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #eceef1;
+  border-radius: 8px;
+}
+.wsp-doc-icon { font-size: 18px; }
+.wsp-doc-info { flex: 1 1 auto; min-width: 0; }
+.wsp-doc-name { font-size: 13px; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wsp-doc-type { font-size: 12px; color: #1f6feb; margin-top: 1px; }
+.wsp-doc-info-line { font-size: 11px; color: #9ca3af; margin-top: 1px; }
+/* status pills reuse .doc-status-* but need light-bg variants here */
+.wsp-doc .doc-status-ok { background: #ecfdf5; color: #047857; border-color: #a7f3d0; }
+.wsp-doc .doc-status-warn { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+
+.wsp-guidance {
+  margin-top: 20px;
+  padding: 18px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  text-align: center;
+}
+.wsp-guidance-title { font-size: 15px; font-weight: 700; color: #1e40af; margin-bottom: 4px; }
+.wsp-guidance-body { font-size: 13px; color: #1e40af; max-width: 520px; margin: 0 auto 12px; }
+
+.wsp-empty { max-width: 540px; margin: 10vh auto 0; text-align: center; padding: 0 24px; }
+.wsp-empty-icon { font-size: 40px; }
+.wsp-empty-title { font-size: 24px; margin: 12px 0 8px; }
+.wsp-empty-body { color: #4b5563; font-size: 14px; margin: 0 0 18px; }
+.wsp-empty-sub {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: #6b7280; margin-bottom: 8px;
+}
+.wsp-empty-list {
+  display: inline-block;
+  text-align: left;
+  margin: 0 auto 18px;
+  padding-left: 20px;
+  color: #374151;
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+.wsp-empty-hint { color: #6b7280; font-size: 12.5px; }

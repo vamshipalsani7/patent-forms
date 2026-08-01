@@ -29,16 +29,27 @@ from models.fact import Fact
 class DocumentType(str, Enum):
     """Classification of an uploaded patent document.
 
-    Must stay in sync with vocabulary/registry.json sourceTypes.
-    Add a member here whenever adding a new extractor in extractors/.
+    Must stay in sync with vocabulary/registry.json sourceTypes — in BOTH
+    directions, enforced by vocabulary.lint.lint_source_type_coverage().
+
+    A registry sourceType with no member here is unreachable: the classifier can
+    only ever emit members of this enum, so every `autofill.sources[]` entry
+    citing that sourceType silently never matches, no matter how good the
+    extractor is. That gap once hid 49 authored autofill sources.
     """
 
     FORM1 = "form1"
     FORM2_SPECIFICATION = "form2_specification"
     FORM3 = "form3"
     FORM5 = "form5"
+    FORM16_REGISTRATION = "form16_registration"
+    FORM26_AUTHORISATION = "form26_authorisation"
+    FORM28 = "form28"
     PATENT_CERTIFICATE = "patent_certificate"
     PRIORITY_DOCUMENT = "priority_document"
+    PCT_DOCUMENT = "pct_document"
+    ASSIGNMENT_DOCUMENT = "assignment_document"
+    PUBLICATION_RECORD = "publication_record"
     GENERIC = "generic"
     UNKNOWN = "unknown"
 

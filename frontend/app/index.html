@@ -12,7 +12,7 @@
     <div class="appbar-logo">⚖</div>
     <div class="appbar-title-wrap">
       <div class="appbar-title">Patent Forms</div>
-      <div class="appbar-subtitle">IPO Form Preparation</div>
+      <div class="appbar-subtitle">Documents in · Filing-ready forms out</div>
     </div>
   </header>
 
@@ -27,15 +27,19 @@
   <!-- App-shell modules (plain scripts, no bundler — matches frontend/renderer/) -->
   <script src="dom.js"></script>
 
-  <!-- Extraction: must load before documentUpload.js (which references extractionClient) -->
+  <!-- Extraction + workspace HTTP layer: load before consumers -->
   <script src="extractionClient.js"></script>
   <script src="suggestionStore.js"></script>
 
-  <!-- Document Workspace: independent of forms/renderer entirely -->
-  <script src="pdfValidation.js"></script>
+  <!-- Document Workspace: upload of source documents (PDF/DOCX/DOC/TXT) -->
+  <script src="fileValidation.js"></script>
   <script src="documentStore.js"></script>
   <script src="documentUpload.js"></script>
   <script src="documentWorkspace.js"></script>
+
+  <!-- Patent Workspace: consolidated view + the user's own decisions -->
+  <script src="workspaceOverrides.js"></script>
+  <script src="workspaceView.js"></script>
 
   <script src="formCatalog.js"></script>
   <script src="formLoader.js"></script>
