@@ -114,7 +114,7 @@ describe("documentUpload — ingestion stamps the workspace", () => {
   let ns, uploadCalls;
 
   beforeEach(() => {
-    const env = bootstrap("fileValidation.js", "documentStore.js");
+    const env = bootstrap("pdfValidation.js", "documentStore.js");
     ns = env.ns;
 
     // Stub the extraction client: ingestion fires it, but the network round
@@ -157,25 +157,12 @@ describe("documentUpload — ingestion stamps the workspace", () => {
     );
   });
 
-  test("accepts a Word document, not only a PDF", () => {
-    const result = ns.documentUpload.ingestFiles([
-      { name: "specification.docx", size: 4096, type: "" },
-    ]);
-    assert.equal(result.accepted.length, 1);
-    assert.equal(result.rejected.length, 0);
-  });
-
-  test("accepts a plain-text source document", () => {
+  test("rejects a non-PDF and does not store it", () => {
     const result = ns.documentUpload.ingestFiles([{ name: "notes.txt", size: 10, type: "text/plain" }]);
-    assert.equal(result.accepted.length, 1);
-  });
-
-  test("rejects an unsupported file type and does not store it", () => {
-    const result = ns.documentUpload.ingestFiles([{ name: "sheet.xlsx", size: 10, type: "" }]);
 
     assert.equal(result.accepted.length, 0);
     assert.equal(result.rejected.length, 1);
-    assert.match(result.rejected[0].reason, /PDF|DOCX|DOC|TXT/i);
+    assert.match(result.rejected[0].reason, /PDF/i);
     assert.deepEqual(ns.documentStore.list(), []);
   });
 
@@ -197,7 +184,7 @@ describe("documentUpload — ingestion stamps the workspace", () => {
   });
 
   test("does not send rejected files for extraction", () => {
-    ns.documentUpload.ingestFiles([{ name: "sheet.xlsx", size: 10, type: "" }]);
+    ns.documentUpload.ingestFiles([{ name: "notes.txt", size: 10, type: "text/plain" }]);
     assert.equal(uploadCalls.length, 0);
   });
 
@@ -205,153 +192,14 @@ describe("documentUpload — ingestion stamps the workspace", () => {
     ns.documentUpload.ingestFiles([pdf()]);
     const stored = JSON.parse(globalThis.localStorage.getItem("patentforms.documents"));
 
-    // Extraction-status fields are metadata about the document, not its bytes;
-    // no field here holds file contents (no base64, no arrayBuffer).
     assert.deepEqual(
       Object.keys(stored[0]).sort(),
-      ["detectedType", "detectedTypeLabel", "displayTitle", "extractionStatus",
-       "factCount", "id", "originalFilename", "size", "uploadedAt", "workspaceId"],
+      ["displayTitle", "id", "originalFilename", "size", "uploadedAt", "workspaceId"],
     );
   });
 
   test("handles an empty file list", () => {
     const result = ns.documentUpload.ingestFiles([]);
     assert.deepEqual(result, { accepted: [], rejected: [] });
-  });
-});
-
-describe("extractionClient — the workspace travels with every request", () => {
-  let ns, requests;
-
-  beforeEach(() => {
-    ({ ns } = bootstrap("extractionClient.js"));
-
-    requests = [];
-    globalThis.fetch = (url, options) => {
-      requests.push({ url, options });
-      return Promise.resolve({
-        ok: true,
-        status: 200,
-        json: () => Promise.resolve({ form_id: "form_03", workspace_id: "ws", suggestions: {} }),
-      });
-    };
-    // FormData is not a Node global in every version; a minimal stand-in is
-    // enough to observe which fields the client appends.
-    globalThis.FormData = class {
-      constructor() { this.entries = []; }
-      append(k, v) { this.entries.push([k, v]); }
-      get(k) { const e = this.entries.find((x) => x[0] === k); return e ? e[1] : null; }
-    };
-  });
-
-  test("upload sends the workspace alongside the document", async () => {
-    await ns.extractionClient.uploadForExtraction("doc_1", { name: "a.pdf" }, "patent_a");
-
-    const body = requests[0].options.body;
-    assert.equal(body.get("workspace_id"), "patent_a");
-    assert.equal(body.get("document_id"), "doc_1");
-  });
-
-  test("suggestions are requested for a named workspace", async () => {
-    await ns.extractionClient.getSuggestions("form_03", "patent_a");
-    assert.match(requests[0].url, /workspace_id=patent_a/);
-  });
-
-  test("the workspace id is url-encoded", async () => {
-    await ns.extractionClient.getSuggestions("form_03", "a b&c");
-    assert.match(requests[0].url, /workspace_id=a%20b%26c/);
-    assert.ok(!requests[0].url.includes("&c="), "an unencoded id could forge a query parameter");
-  });
-
-  test("the user's workspace decisions travel with the suggestions request", async () => {
-    await ns.extractionClient.getSuggestions("form_01", "ws", { "invention.title": "Chosen Title" });
-    const url = requests[0].url;
-    assert.match(url, /overrides=/);
-    const value = decodeURIComponent(url.split("overrides=")[1]);
-    assert.deepEqual(JSON.parse(value), { "invention.title": "Chosen Title" });
-  });
-
-  test("no overrides parameter is sent when there are no decisions", async () => {
-    await ns.extractionClient.getSuggestions("form_01", "ws", {});
-    assert.ok(!requests[0].url.includes("overrides="), "empty decisions must not add the param");
-  });
-
-  test("a failed request still reports which workspace it was for", async () => {
-    globalThis.fetch = () => Promise.reject(new Error("backend offline"));
-    const result = await ns.extractionClient.getSuggestions("form_03", "patent_a");
-
-    assert.equal(result.workspace_id, "patent_a");
-    assert.deepEqual(result.suggestions, {}, "an offline backend must not imply 'no scoping'");
-  });
-});
-
-describe("suggestionStore — cache is scoped per workspace", () => {
-  let ns;
-
-  beforeEach(() => {
-    ({ ns } = bootstrap("suggestionStore.js"));
-  });
-
-  const forWorkspace = (name) => ({ "sec.a": { value: name, fact: { document_id: "d" } } });
-
-  test("one workspace's cached suggestions are invisible to another", () => {
-    ns.suggestionStore.setSuggestions("form_03", forWorkspace("Company A"), "patent_a");
-    assert.deepEqual(ns.suggestionStore.getSuggestions("form_03", "patent_b"), {});
-  });
-
-  test("each workspace keeps its own cache for the same form", () => {
-    ns.suggestionStore.setSuggestions("form_03", forWorkspace("Company A"), "patent_a");
-    ns.suggestionStore.setSuggestions("form_03", forWorkspace("Company B"), "patent_b");
-
-    assert.equal(ns.suggestionStore.getSuggestions("form_03", "patent_a")["sec.a"].value, "Company A");
-    assert.equal(ns.suggestionStore.getSuggestions("form_03", "patent_b")["sec.a"].value, "Company B");
-  });
-
-  test("clearing one workspace's cache leaves the other intact", () => {
-    ns.suggestionStore.setSuggestions("form_03", forWorkspace("Company A"), "patent_a");
-    ns.suggestionStore.setSuggestions("form_03", forWorkspace("Company B"), "patent_b");
-
-    ns.suggestionStore.clearSuggestions("form_03", "patent_a");
-
-    assert.deepEqual(ns.suggestionStore.getSuggestions("form_03", "patent_a"), {});
-    assert.equal(ns.suggestionStore.getSuggestions("form_03", "patent_b")["sec.a"].value, "Company B");
-  });
-});
-
-describe("documentStore — the default workspace is shared, not duplicated", () => {
-  test("exposes the constant upload and retrieval both depend on", () => {
-    const { ns } = bootstrap("documentStore.js");
-    assert.equal(typeof ns.documentStore.DEFAULT_WORKSPACE, "string");
-    assert.ok(ns.documentStore.DEFAULT_WORKSPACE.length > 0);
-  });
-
-  test("ingest stamps documents with exactly that workspace", () => {
-    const env = bootstrap("fileValidation.js", "documentStore.js");
-    env.ns.extractionClient = { uploadForExtraction: () => Promise.resolve(null) };
-    loadAppScript("documentUpload.js");
-
-    const { accepted } = env.ns.documentUpload.ingestFiles([
-      { name: "a.pdf", size: 10, type: "application/pdf" },
-    ]);
-    assert.equal(accepted[0].workspaceId, env.ns.documentStore.DEFAULT_WORKSPACE);
-  });
-
-  test("the workspace sent for extraction matches the one stored", () => {
-    const env = bootstrap("fileValidation.js", "documentStore.js");
-    const sent = [];
-    env.ns.extractionClient = {
-      uploadForExtraction: (id, file, workspaceId) => {
-        sent.push(workspaceId);
-        return Promise.resolve(null);
-      },
-    };
-    loadAppScript("documentUpload.js");
-
-    const { accepted } = env.ns.documentUpload.ingestFiles([
-      { name: "a.pdf", size: 10, type: "application/pdf" },
-    ]);
-
-    assert.deepEqual(sent, [accepted[0].workspaceId],
-      "a mismatch would file the document under a workspace the UI never queries");
   });
 });

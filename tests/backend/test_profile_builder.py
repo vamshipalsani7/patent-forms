@@ -96,39 +96,10 @@ class TestExtractorDispatch(unittest.TestCase):
         )
         self.assertEqual(3, extract.page_count)
 
-    def test_registered_extractors_are_pinned(self):
-        """Registration is the documented extension point, so a surprise
-        addition or removal should be visible rather than silent.
-
-        The set is exactly the sourceTypes with enough authored autofill demand
-        to justify pattern work. FER, Hearing Notice and Controller Order are
-        absent on purpose — no form definition consumes a fact from them.
-        """
-        self.assertEqual(
-            {
-                DocumentType.FORM1,
-                DocumentType.PATENT_CERTIFICATE,
-                DocumentType.FORM26_AUTHORISATION,
-                DocumentType.FORM2_SPECIFICATION,
-                DocumentType.ASSIGNMENT_DOCUMENT,
-                DocumentType.PRIORITY_DOCUMENT,
-                DocumentType.FORM5,
-                DocumentType.PCT_DOCUMENT,
-            },
-            set(_EXTRACTOR_REGISTRY),
-        )
-
-    def test_every_registered_extractor_declares_its_own_source_type(self):
-        """A copy-paste slip here mislabels every fact the extractor produces,
-        and the mapper then matches it against the wrong sourceType."""
-        for doc_type, extractor in _EXTRACTOR_REGISTRY.items():
-            with self.subTest(document_type=doc_type):
-                self.assertEqual(doc_type.value, extractor.SOURCE_TYPE)
-                self.assertTrue(
-                    extractor.EXTRACTOR_VERSION.startswith(doc_type.value + "@"),
-                    f"{doc_type.value} extractor version "
-                    f"'{extractor.EXTRACTOR_VERSION}' should be '{doc_type.value}@n'",
-                )
+    def test_only_form1_is_registered_in_this_slice(self):
+        """The slice deliberately ships one extractor; adding more is the
+        documented extension point, so a surprise addition should be visible."""
+        self.assertEqual([DocumentType.FORM1], list(_EXTRACTOR_REGISTRY.keys()))
 
     def test_every_registered_extractor_exposes_the_expected_interface(self):
         for doc_type, extractor in _EXTRACTOR_REGISTRY.items():

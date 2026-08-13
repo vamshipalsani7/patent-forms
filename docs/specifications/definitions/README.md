@@ -34,16 +34,6 @@ print("OK" if not errs else [ (list(e.path), e.message) for e in errs ])
 PY
 ```
 
-## Start here: the pattern library
-
-Before authoring a new definition, start from the **[Authoring Pattern
-Library](../patterns/README.md)**. It provides canonical, registry-clean,
-schema-valid copy-paste snippets for the blocks that recur across almost every
-form — applicant details, address for service, signature block, date line,
-addressee, strike-out choices, and common declarations — extracted from the
-Form 3 reference below. Copy a snippet, rename its ids, set labels verbatim, and
-drop inapplicable autofill sources; then run `python backend/vocabulary/lint.py`.
-
 ## Modeling conventions used in Form 3
 
 These conventions should be applied uniformly to the remaining forms once approved:

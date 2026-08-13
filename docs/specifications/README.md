@@ -14,11 +14,6 @@ export in the Patent Forms application.
 > **Form Definition schema** derived from them lives in [`schema/`](schema/README.md) — one
 > JSON Schema that every form-definition file validates against.
 
-> **Authoring patterns.** Reusable copy-paste building blocks for the blocks that recur across
-> forms (applicant details, address for service, signature/date/addressee, strike-out choices,
-> common declarations) live in [`patterns/`](patterns/README.md). Start there when authoring a
-> new `definitions/<form>.definition.json`.
-
 ---
 
 ## How to read these specs

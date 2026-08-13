@@ -25,8 +25,6 @@ from fastapi import UploadFile
 
 import app as app_module
 
-WORKSPACE = "default"
-
 
 class VerticalSliceTestCase(unittest.TestCase):
     def setUp(self):
@@ -42,16 +40,14 @@ class VerticalSliceTestCase(unittest.TestCase):
         content_store_module._UPLOADS_DIR = self._original_dir
         self._tmp.cleanup()
 
-    def upload(self, document_id, pdf_path, workspace_id=WORKSPACE):
+    def upload(self, document_id, pdf_path):
         data = Path(pdf_path).read_bytes()
         upload = UploadFile(
             file=io.BytesIO(data),
             filename=Path(pdf_path).name,
             headers={"content-type": "application/pdf"},
         )
-        return asyncio.run(app_module.extract_document(
-            file=upload, document_id=document_id, workspace_id=workspace_id,
-        ))
+        return asyncio.run(app_module.extract_document(file=upload, document_id=document_id))
 
 
 class TestFormOneToFormThree(VerticalSliceTestCase):
@@ -60,7 +56,7 @@ class TestFormOneToFormThree(VerticalSliceTestCase):
     def setUp(self):
         super().setUp()
         self.extract = self.upload("doc_slice", context.FORM1_PDF)
-        self.suggestions = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
+        self.suggestions = app_module.get_suggestions("form_03")["suggestions"]
 
     # --- the upload/extract half ---
 
@@ -72,10 +68,10 @@ class TestFormOneToFormThree(VerticalSliceTestCase):
 
     def test_the_pdf_bytes_are_persisted_for_re_extraction(self):
         """Stored bytes are what make re-extraction possible without re-upload."""
-        self.assertIsNotNone(self.store.get_pdf_path(WORKSPACE, "doc_slice"))
+        self.assertIsNotNone(self.store.get_pdf_path("doc_slice"))
 
     def test_the_extract_is_persisted(self):
-        self.assertIsNotNone(self.store.get_extract(WORKSPACE, "doc_slice"))
+        self.assertIsNotNone(self.store.get_extract("doc_slice"))
 
     # --- the autofill half ---
 
@@ -131,7 +127,7 @@ class TestUnsupportedDocument(VerticalSliceTestCase):
         self.assertEqual([], self.extract["facts"])
 
     def test_yields_no_suggestions(self):
-        self.assertEqual({}, app_module.get_suggestions("form_03", WORKSPACE)["suggestions"])
+        self.assertEqual({}, app_module.get_suggestions("form_03")["suggestions"])
 
 
 class TestReExtraction(VerticalSliceTestCase):
@@ -139,14 +135,14 @@ class TestReExtraction(VerticalSliceTestCase):
 
     def test_re_uploading_the_same_document_id_replaces_its_facts(self):
         self.upload("doc_x", context.FORM1_PDF)
-        first = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
+        first = app_module.get_suggestions("form_03")["suggestions"]
         self.assertIn("foreign_filings.indian_application_number", first)
 
         # Same document id, different document content.
         self.upload("doc_x", context.NON_FORM_PDF)
-        second = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
+        second = app_module.get_suggestions("form_03")["suggestions"]
 
-        self.assertEqual(1, len(self.store.extracts_for_workspace(WORKSPACE)), "re-extraction duplicated the document")
+        self.assertEqual(1, len(self.store.all_extracts()), "re-extraction duplicated the document")
         self.assertEqual({}, second, "stale facts survived re-extraction")
 
 
@@ -155,8 +151,8 @@ class TestMultipleDocuments(VerticalSliceTestCase):
         self.upload("doc_1", context.FORM1_PDF)
         self.upload("doc_2", context.NON_FORM_PDF)
 
-        self.assertEqual(2, len(self.store.extracts_for_workspace(WORKSPACE)))
-        suggestions = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
+        self.assertEqual(2, len(self.store.all_extracts()))
+        suggestions = app_module.get_suggestions("form_03")["suggestions"]
         self.assertEqual(
             "doc_1",
             suggestions["applicant_declaration.applicant_names"]["fact"]["document_id"],
@@ -173,7 +169,7 @@ class TestSuggestionsMatchTheShippedDefinition(VerticalSliceTestCase):
 
     def test_every_suggested_path_maps_to_a_real_field(self):
         self.upload("doc_slice", context.FORM1_PDF)
-        suggestions = app_module.get_suggestions("form_03", WORKSPACE)["suggestions"]
+        suggestions = app_module.get_suggestions("form_03")["suggestions"]
 
         definition = json.loads(
             (context.DEFINITIONS_DIR / "form_03.definition.json").read_text(encoding="utf-8")

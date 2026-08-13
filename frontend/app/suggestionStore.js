@@ -11,36 +11,27 @@ window.PatentFormsApp = window.PatentFormsApp || {};
 
   var PREFIX = "patentforms.suggestions.";
 
-  // Cached suggestions are derived from one workspace's documents, so the
-  // cache key names that workspace too. Keying by form alone would let a
-  // cached suggestion from one patent surface while another is open.
-  function cacheKey(formId, workspaceId) {
-    return PREFIX + (workspaceId || "default") + "." + formId;
-  }
-
   /**
-   * Persist suggestions for a form within a workspace.
+   * Persist suggestions for a form.
    * @param {string} formId
-   * @param {object} suggestions   { fieldPath: { value, fact } }
-   * @param {string} [workspaceId] defaults to 'default'
+   * @param {object} suggestions  { fieldPath: { value, fact } }
    */
-  function setSuggestions(formId, suggestions, workspaceId) {
+  function setSuggestions(formId, suggestions) {
     try {
-      localStorage.setItem(cacheKey(formId, workspaceId), JSON.stringify(suggestions));
+      localStorage.setItem(PREFIX + formId, JSON.stringify(suggestions));
     } catch (_) {
       // Storage quota exceeded — silently ignore; suggestions can be re-fetched
     }
   }
 
   /**
-   * Retrieve cached suggestions for a form within a workspace.
+   * Retrieve cached suggestions.
    * @param {string} formId
-   * @param {string} [workspaceId] defaults to 'default'
    * @returns {object}  { fieldPath: { value, fact } } or {} if not cached
    */
-  function getSuggestions(formId, workspaceId) {
+  function getSuggestions(formId) {
     try {
-      var raw = localStorage.getItem(cacheKey(formId, workspaceId));
+      var raw = localStorage.getItem(PREFIX + formId);
       return raw ? JSON.parse(raw) : {};
     } catch (_) {
       return {};
@@ -48,12 +39,11 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   }
 
   /**
-   * Remove cached suggestions for a form within a workspace.
+   * Remove cached suggestions for a form.
    * @param {string} formId
-   * @param {string} [workspaceId] defaults to 'default'
    */
-  function clearSuggestions(formId, workspaceId) {
-    localStorage.removeItem(cacheKey(formId, workspaceId));
+  function clearSuggestions(formId) {
+    localStorage.removeItem(PREFIX + formId);
   }
 
   ns.suggestionStore = {

@@ -11,16 +11,14 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   var BACKEND_URL = "http://localhost:8000";
 
   /**
-   * Upload a PDF file for extraction into one workspace.
-   * @param {string} documentId   — the id stored in documentStore
-   * @param {File}   file         — the raw File object from drag/drop
-   * @param {string} workspaceId  — the patent matter this document belongs to
+   * Upload a PDF file for extraction.
+   * @param {string} documentId  — the id stored in documentStore
+   * @param {File}   file        — the raw File object from drag/drop
    * @returns {Promise<object|null>}  DocumentExtract JSON, or null on failure
    */
-  function uploadForExtraction(documentId, file, workspaceId) {
+  function uploadForExtraction(documentId, file) {
     var body = new FormData();
     body.append("document_id", documentId);
-    body.append("workspace_id", workspaceId);
     body.append("file", file);
 
     return fetch(BACKEND_URL + "/api/extract", { method: "POST", body: body })
@@ -39,68 +37,25 @@ window.PatentFormsApp = window.PatentFormsApp || {};
   }
 
   /**
-   * Fetch autofill suggestions for a form, scoped to one workspace.
-   * @param {string} formId       — e.g. 'form_03'
-   * @param {string} workspaceId  — only this workspace's documents are consulted
-   * @param {object} [overrides]  — the user's Patent Workspace decisions,
-   *                                {vocabKey: value}; the form pre-fills with
-   *                                these over the raw extractions.
-   * @returns {Promise<object>}  { form_id, workspace_id, suggestions: {...} }
+   * Fetch autofill suggestions for a form from the backend.
+   * @param {string} formId  — e.g. 'form_03'
+   * @returns {Promise<object>}  { form_id, suggestions: { fieldPath: { value, fact } } }
    *                             Always resolves (empty suggestions on failure).
    */
-  function getSuggestions(formId, workspaceId, overrides) {
-    var url = BACKEND_URL + "/api/suggestions/" + encodeURIComponent(formId) +
-      "?workspace_id=" + encodeURIComponent(workspaceId);
-    if (overrides && Object.keys(overrides).length) {
-      url += "&overrides=" + encodeURIComponent(JSON.stringify(overrides));
-    }
-    var empty = { form_id: formId, workspace_id: workspaceId, suggestions: {} };
-
-    return fetch(url)
+  function getSuggestions(formId) {
+    return fetch(BACKEND_URL + "/api/suggestions/" + formId)
       .then(function (res) {
         if (!res.ok) {
           console.warn("[extraction] GET /api/suggestions/" + formId + " returned " + res.status);
-          return empty;
+          return { form_id: formId, suggestions: {} };
         }
         return res.json();
       })
       .catch(function (err) {
         console.warn("[extraction] getSuggestions failed:", err.message);
-        return empty;
+        return { form_id: formId, suggestions: {} };
       });
   }
 
-  /**
-   * Fetch the consolidated Patent Workspace summary for one matter.
-   * @param {string} workspaceId
-   * @returns {Promise<object>}  the workspace summary, or an empty-but-valid
-   *                             shape on failure (so the UI still renders).
-   */
-  function getWorkspace(workspaceId) {
-    var url = BACKEND_URL + "/api/workspace/" + encodeURIComponent(workspaceId);
-    var empty = {
-      workspace_id: workspaceId, documents: [], sections: [], missing: [],
-      stats: { document_count: 0, fact_count: 0, conflict_count: 0, missing_count: 0 },
-      unavailable: true,
-    };
-
-    return fetch(url)
-      .then(function (res) {
-        if (!res.ok) {
-          console.warn("[extraction] GET /api/workspace/" + workspaceId + " returned " + res.status);
-          return empty;
-        }
-        return res.json();
-      })
-      .catch(function (err) {
-        console.warn("[extraction] getWorkspace failed:", err.message);
-        return empty;
-      });
-  }
-
-  ns.extractionClient = {
-    uploadForExtraction: uploadForExtraction,
-    getSuggestions: getSuggestions,
-    getWorkspace: getWorkspace,
-  };
+  ns.extractionClient = { uploadForExtraction: uploadForExtraction, getSuggestions: getSuggestions };
 })(window.PatentFormsApp);

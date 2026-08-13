@@ -25,18 +25,6 @@ class DocumentExtract(BaseModel):
     document_id: str
     """documentStore id — the frontend's handle for this document."""
 
-    workspace_id: str = "default"
-    """The workspace this document belongs to. Exactly one, never a list.
-
-    Documents for different patents must never merge into one profile: a Form 1
-    for Patent A combined with a certificate for Patent B yields a confidently
-    wrong result, which is worse than an empty one because it looks fine.
-
-    The default exists only so records constructed in-process stay valid; the
-    API layer requires the caller to state a workspace explicitly, so no real
-    upload can rely on it.
-    """
-
     source_type: str
     """Classifier output, matching a sourceType in vocabulary/registry.json."""
 

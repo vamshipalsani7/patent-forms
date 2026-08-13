@@ -136,7 +136,7 @@ describe("suggestionStore — cached suggestions", () => {
   });
 
   test("survives corrupt storage instead of throwing", () => {
-    localStorage.setItem("patentforms.suggestions.default.form_03", "{ not json");
+    localStorage.setItem("patentforms.suggestions.form_03", "{ not json");
     assert.deepEqual(ns.suggestionStore.getSuggestions("form_03"), {});
   });
 

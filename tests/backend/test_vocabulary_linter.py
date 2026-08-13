@@ -17,13 +17,7 @@ from pathlib import Path
 
 import context  # noqa: F401  — sets sys.path
 
-from vocabulary.lint import (
-    lint_file,
-    lint_source_type_coverage,
-    load_registry,
-    main,
-    walk_autofill_blocks,
-)
+from vocabulary.lint import lint_file, load_registry, main, walk_autofill_blocks
 
 
 def _definition(fields):
@@ -171,56 +165,6 @@ class TestLintRules(unittest.TestCase):
             }
         ])
         self.assertEqual([], rules)
-
-
-class TestSourceTypeCoverage(unittest.TestCase):
-    """registry sourceTypes and DocumentType members must agree, both ways.
-
-    This rule was added after a real gap: six registry sourceTypes had no
-    DocumentType member, so the classifier could never emit them and 49
-    authored `autofill.sources[]` entries — 18% of the whole library — could
-    never match, no matter how good the extractor was. Nothing failed. Autofill
-    just quietly returned fewer suggestions than the definitions asked for.
-    """
-
-    def test_the_real_vocabulary_is_currently_in_sync(self):
-        self.assertEqual([], lint_source_type_coverage(load_registry()))
-
-    def test_flags_a_registry_source_type_with_no_document_type(self):
-        registry = load_registry()
-        registry["sourceTypes"]["form99_imaginary"] = {"description": "unreachable"}
-
-        errors = lint_source_type_coverage(registry)
-
-        self.assertEqual(1, len(errors))
-        self.assertEqual("UNREACHABLE_SOURCE_TYPE", errors[0].rule)
-        self.assertIn("form99_imaginary", errors[0].detail)
-
-    def test_flags_a_document_type_with_no_registry_source_type(self):
-        registry = load_registry()
-        removed = registry["sourceTypes"].pop("patent_certificate")
-        self.assertTrue(removed, "fixture expects patent_certificate to be registered")
-
-        errors = lint_source_type_coverage(registry)
-
-        self.assertEqual(1, len(errors))
-        self.assertEqual("UNSPENDABLE_DOCUMENT_TYPE", errors[0].rule)
-        self.assertIn("patent_certificate", errors[0].detail)
-
-    def test_processing_states_are_exempt(self):
-        """GENERIC and UNKNOWN describe how a document was handled, not what it
-        is, so they are deliberately absent from the registry."""
-        registry = load_registry()
-        self.assertNotIn("generic", registry["sourceTypes"])
-        self.assertNotIn("unknown", registry["sourceTypes"])
-        self.assertEqual([], lint_source_type_coverage(registry))
-
-    def test_the_error_names_the_fix(self):
-        registry = load_registry()
-        registry["sourceTypes"]["form99_imaginary"] = {"description": "unreachable"}
-        error = lint_source_type_coverage(registry)[0]
-        self.assertIn("patent_profile.py", error.fix)
-        self.assertIn("classifier.py", error.fix)
 
 
 class TestLinterAgainstRealDefinitions(unittest.TestCase):

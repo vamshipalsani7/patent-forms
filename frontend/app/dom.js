@@ -15,12 +15,5 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return n;
   }
 
-  // "1 document" / "2 documents" — the app talks to patent professionals, not
-  // to a parser, so counts read as English rather than "1 document(s)".
-  function plural(n, singular, pluralForm) {
-    var word = n === 1 ? singular : (pluralForm || singular + "s");
-    return n + " " + word;
-  }
-
-  ns.dom = { el: el, plural: plural };
+  ns.dom = { el: el };
 })(window.PatentFormsApp);
