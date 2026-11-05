@@ -152,6 +152,16 @@
   // --------------------------------------------------------- field renderers
   // Returns a DOM node for one field at `path`. Inline vs block chosen by group.
   function renderField(f, base) {
+    var node = renderFieldNode(f, base);
+    // Tag every field's node with its state path. This is the only hook the
+    // host's review layer needs to attach provenance to a field; it changes
+    // nothing about how the field renders or behaves. Rendering logic below is
+    // unchanged from the approved version.
+    if (node && node.setAttribute) node.setAttribute("data-path", base + "." + f.id);
+    return node;
+  }
+
+  function renderFieldNode(f, base) {
     var path = base + "." + f.id;
     var inline = !!(f.presentation && f.presentation.group);
 

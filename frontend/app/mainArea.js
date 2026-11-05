@@ -109,7 +109,13 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return JSON.stringify(a) === JSON.stringify(b);
   }
 
-  function mountMainArea(container) {
+  /**
+   * @param {HTMLElement} container
+   * @param {object} [opts] { onPrepareAnother } — host actions the main area
+   *        offers but does not own (returning to the form list, for instance).
+   */
+  function mountMainArea(container, opts) {
+    opts = opts || {};
     var root = el("div", "main-area");
     container.appendChild(root);
 
@@ -162,113 +168,292 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     }
 
     /**
+     * The AI Form Review experience: the generated form, presented as something
+     * to verify rather than fill. A live summary sits above it, and every
+     * autofilled field is decorated (by reviewLayer, over the renderer) with
+     * where its value came from.
+     *
      * @param {object} definition   parsed form definition JSON
      * @param {string} formId       e.g. 'form_03'
-     * @param {object} [suggestions] { fieldPath: { value, fact } } from backend; may be omitted
+     * @param {object} [suggestions] { fieldPath: {value, fact, source_label} } from backend
+     * @param {string} [workspaceId] the patent matter (for conflict-resolution provenance)
      */
-    function showForm(definition, formId, suggestions) {
+    function showForm(definition, formId, suggestions, workspaceId) {
       clear();
       suggestions = suggestions || {};
 
-      // --- suggestion values (flat path→value) ---
       var suggestedValues = flattenSuggestions(suggestions);
 
-      // --- draft (persisted user edits) ---
+      // --- draft (persisted user edits + reviewed marks) ---
       var draft = formState.loadDraft(formId);
       var draftValues = draft ? (draft.values || {}) : {};
-      // Paths the user has explicitly edited (saved across sessions)
       var savedUserEditedPaths = draft ? (draft.userEditedPaths || []) : [];
 
-      // Runtime set of user-edited paths — starts from saved set; grows as user types
       var currentUserEditedPaths = {};
       savedUserEditedPaths.forEach(function (p) { currentUserEditedPaths[p] = true; });
 
-      // --- build initialValues ---
-      // Base: suggestion values (can be refreshed next session)
-      // Override: draft values only for paths the user explicitly edited
+      var reviewedPaths = {};
+      (draft && draft.reviewedPaths ? draft.reviewedPaths : []).forEach(function (p) { reviewedPaths[p] = true; });
+
+      // Base: suggestion values; override with draft values only where the user edited.
       var initialValues = Object.assign({}, suggestedValues);
       savedUserEditedPaths.forEach(function (p) {
         if (draftValues[p] !== undefined) initialValues[p] = draftValues[p];
       });
 
-      // --- toolbar ---
-      var toolbar = el("div", "form-toolbar");
-      var titleWrap = el("div", "form-toolbar-title");
-      titleWrap.appendChild(el("div", "form-toolbar-number", "Form " + definition.formNumber));
-      titleWrap.appendChild(el("div", "form-toolbar-name", definition.officialName));
-      toolbar.appendChild(titleWrap);
-
-      var actions = el("div", "form-toolbar-actions");
-      var status = el("span", "draft-status");
-
-      var freshBtn = el("button", "app-btn ghost", "Start Fresh");
-      freshBtn.type = "button";
-      var saveBtn = el("button", "app-btn primary", "Save Draft");
-      saveBtn.type = "button";
-      actions.appendChild(status);
-      actions.appendChild(freshBtn);
-      actions.appendChild(saveBtn);
-      toolbar.appendChild(actions);
-      root.appendChild(toolbar);
-
-      // Set initial status message
-      var hasSuggestions = Object.keys(suggestedValues).length > 0;
-      if (draft) {
-        status.textContent = "Restored draft · saved " + formatTime(draft.savedAt);
-      } else if (hasSuggestions) {
-        status.textContent = Object.keys(suggestedValues).length + " field(s) auto-filled";
-      } else {
-        status.textContent = "No saved draft yet";
+      // Which vocabulary keys the user resolved as conflicts — so a value chosen
+      // during review reads "Selected during review", not as a plain extraction.
+      var resolvedKeys = {};
+      if (workspaceId && ns.workspaceOverrides) {
+        var resolved = (ns.workspaceOverrides.load(workspaceId) || {}).resolved || {};
+        Object.keys(resolved).forEach(function (k) { resolvedKeys[k] = true; });
       }
 
-      // --- provenance banner ---
-      var banner = buildProvenanceBanner(suggestions);
-      if (banner) root.appendChild(banner);
+      // ------------------------------------------------------- review summary
+      var header = el("div", "review-header");
+      var titleWrap = el("div", "review-title");
+      titleWrap.appendChild(el("div", "review-form-number", "Form " + definition.formNumber));
+      titleWrap.appendChild(el("div", "review-form-name", definition.officialName));
+      titleWrap.appendChild(el("div", "review-tagline", "Automatically completed — review each value below."));
+      header.appendChild(titleWrap);
 
-      // --- renderer ---
-      var mountPoint = el("div", "renderer-mount");
+      var statRow = el("div", "review-stats");
+      var stAuto = reviewStat("Auto-filled");
+      var stReviewed = reviewStat("Reviewed");
+      var stEdited = reviewStat("Edited by you");
+      var stMissing = reviewStat("Missing", "warn");
+      statRow.appendChild(stAuto.node);
+      statRow.appendChild(stReviewed.node);
+      statRow.appendChild(stEdited.node);
+      statRow.appendChild(stMissing.node);
+      header.appendChild(statRow);
+
+      var actions = el("div", "review-actions");
+      var status = el("span", "draft-status");
+      var freshWrap = el("span", "review-fresh");
+      var freshBtn = el("button", "app-btn ghost", "Start over");
+      freshBtn.type = "button";
+      var saveBtn = el("button", "app-btn ghost", "Save Draft");
+      saveBtn.type = "button";
+      var compareBtn = el("button", "app-btn primary", "Continue to comparison →");
+      compareBtn.type = "button";
+      actions.appendChild(status);
+      freshWrap.appendChild(freshBtn);
+      actions.appendChild(freshWrap);
+      actions.appendChild(saveBtn);
+      actions.appendChild(compareBtn);
+      header.appendChild(actions);
+      root.appendChild(header);
+
+      // Completion banner (shown when every required field is filled).
+      var completion = el("div", "review-completion");
+      completion.style.display = "none";
+      root.appendChild(completion);
+
+      // --- renderer (review mode hides the renderer's developer completeness panel) ---
+      var mountPoint = el("div", "renderer-mount review-mode");
       root.appendChild(mountPoint);
+
+      var reviewCtl = null;
+
+      function persistReviewed() {
+        // Reviewed marks live with the draft so they survive a reload.
+        formState.saveDraft(
+          formId, rendererController.getValues(),
+          Object.keys(currentUserEditedPaths), Object.keys(reviewedPaths)
+        );
+      }
+
+      var latestSummary = {};
+      function applySummary(summary) {
+        latestSummary = summary;
+        stAuto.set(summary.autoFilled);
+        stReviewed.set(summary.reviewed);
+        stEdited.set(summary.edited);
+        stMissing.set(summary.missing);
+        renderCompletion(summary);
+      }
+
+      // Save the draft, then hand the current field-by-field snapshot to the
+      // Official IPO Comparison screen. Reachable whether or not the form is
+      // complete — the comparison itself surfaces any remaining missing fields.
+      function goToComparison() {
+        persistReviewed();
+        reviewCtl.refresh(); // ensure the snapshot + summary are current
+        // Capture the renderer's values BEFORE leaving: the renderer is
+        // unmounted when the view changes, and the filing package is built from
+        // exactly these values.
+        showComparison(definition, formId, suggestions, workspaceId,
+          reviewCtl.snapshot(), latestSummary, rendererController.getValues());
+      }
+      compareBtn.addEventListener("click", goToComparison);
+
+      function renderCompletion(summary) {
+        completion.innerHTML = "";
+        // Show "ready" when every substantive field is complete and the form has
+        // real content — whether the AI filled it or the user did. (`tracked`
+        // guards against celebrating a form with nothing substantive to do.)
+        if (summary.complete && summary.tracked > 0) {
+          completion.style.display = "";
+          completion.appendChild(el("div", "review-completion-title", "Everything looks good."));
+          completion.appendChild(el("div", "review-completion-body",
+            "This form is ready for comparison with the official IPO layout."));
+          var cont = el("button", "app-btn primary", "Continue to comparison →");
+          cont.type = "button";
+          cont.addEventListener("click", goToComparison);
+          completion.appendChild(cont);
+        } else {
+          completion.style.display = "none";
+        }
+      }
 
       rendererController = window.FormRenderer.mount(mountPoint, definition, initialValues, {
         onChange: function (values) {
           status.textContent = "Unsaved changes";
           status.classList.add("dirty");
-
-          // Track which paths differ from the suggestion (= user-edited).
-          // The renderer passes `values` (flat path→value snapshot) so we can
-          // diff precisely without any per-field instrumentation.
           Object.keys(values).forEach(function (path) {
             if (path in suggestedValues) {
-              if (!valuesEqual(values[path], suggestedValues[path])) {
-                currentUserEditedPaths[path] = true;
-              } else {
-                // User restored the suggestion — no longer sticky
-                delete currentUserEditedPaths[path];
-              }
+              if (!valuesEqual(values[path], suggestedValues[path])) currentUserEditedPaths[path] = true;
+              else delete currentUserEditedPaths[path];
             }
           });
-        }
+          // Recount without re-decorating, so a field being edited is undisturbed.
+          if (reviewCtl && reviewCtl.recount) reviewCtl.recount();
+        },
+        onGapsChange: function () {
+          // The renderer rebuilt its DOM (e.g. a row was added or a choice
+          // flipped visibility) — re-apply the review decoration over it.
+          if (reviewCtl) reviewCtl.refresh();
+        },
       });
 
+      // Fields handled at filing (signatures, office-use, IPO-generated values,
+      // signing dates) must not count as "missing" or the review can never read
+      // as complete. Computed once from the definition.
+      var exemptPaths = ns.reviewModel.exemptPaths(definition);
+
+      // Attach the review overlay over the freshly rendered form.
+      reviewCtl = ns.reviewLayer.attach(mountPoint, {
+        suggestions: suggestions,
+        getValues: function () { return rendererController.getValues(); },
+        resolvedKeys: resolvedKeys,
+        reviewedPaths: reviewedPaths,
+        exemptPaths: exemptPaths,
+        onReviewedChange: persistReviewed,
+        onSummary: applySummary,
+      });
+      reviewCtl.refresh();
+
       saveBtn.addEventListener("click", function () {
-        var values = rendererController.getValues();
-        var editedPaths = Object.keys(currentUserEditedPaths);
-        var record = formState.saveDraft(formId, values, editedPaths);
+        var record = formState.saveDraft(
+          formId, rendererController.getValues(),
+          Object.keys(currentUserEditedPaths), Object.keys(reviewedPaths)
+        );
         status.textContent = "Draft saved · " + formatTime(record.savedAt);
         status.classList.remove("dirty");
       });
 
-      freshBtn.addEventListener("click", function () {
-        if (!window.confirm("Discard the saved draft for Form " + definition.formNumber + " and start fresh?")) return;
-        formState.clearDraft(formId);
-        // Re-apply suggestions (if any) as the blank slate
-        rendererController.setValues(suggestedValues);
-        // Reset tracked edits — user cleared everything
-        currentUserEditedPaths = {};
-        status.textContent = hasSuggestions
-          ? Object.keys(suggestedValues).length + " field(s) auto-filled"
-          : "No saved draft yet";
-        status.classList.remove("dirty");
+      // "Start over" is a two-step inline confirm — no browser dialog.
+      function buildFreshButton() {
+        freshWrap.innerHTML = "";
+        var btn = el("button", "app-btn ghost", "Start over");
+        btn.type = "button";
+        btn.addEventListener("click", openFreshConfirm);
+        freshWrap.appendChild(btn);
+      }
+      function openFreshConfirm() {
+        freshWrap.innerHTML = "";
+        freshWrap.appendChild(el("span", "review-fresh-q", "Discard your changes?"));
+        var yes = el("button", "app-btn ghost danger", "Discard"); yes.type = "button";
+        var no = el("button", "app-btn ghost", "Keep"); no.type = "button";
+        yes.addEventListener("click", function () {
+          formState.clearDraft(formId);
+          currentUserEditedPaths = {};
+          Object.keys(reviewedPaths).forEach(function (k) { delete reviewedPaths[k]; });
+          rendererController.setValues(suggestedValues); // triggers onGapsChange → refresh
+          status.textContent = "Reset to the auto-filled values";
+          status.classList.remove("dirty");
+          buildFreshButton();
+        });
+        no.addEventListener("click", buildFreshButton);
+        freshWrap.appendChild(yes);
+        freshWrap.appendChild(no);
+      }
+      freshBtn.addEventListener("click", openFreshConfirm);
+
+      if (draft) {
+        status.textContent = "Restored draft · saved " + formatTime(draft.savedAt);
+      } else {
+        status.textContent = "";
+      }
+    }
+
+    function reviewStat(label, cls) {
+      var node = el("div", "review-stat" + (cls ? " review-stat-" + cls : ""));
+      var num = el("span", "review-stat-n", "0");
+      node.appendChild(num);
+      node.appendChild(el("span", "review-stat-l", " " + label));
+      return {
+        node: node,
+        set: function (n) {
+          num.textContent = String(n);
+          if (cls === "warn") node.style.opacity = n > 0 ? "1" : "0.45";
+        },
+      };
+    }
+
+    /**
+     * The Official IPO Comparison screen. Read-only; correcting anything means
+     * "← Back to Review". Driven entirely by the review layer's snapshot, so it
+     * reuses the review model, the renderer's labels, and the definition without
+     * a second rendering engine or a duplicated definition.
+     */
+    function showComparison(definition, formId, suggestions, workspaceId, snapshot, summary, values) {
+      clear();
+      ns.comparisonView.render(root, {
+        formNumber: definition.formNumber,
+        officialName: definition.officialName,
+        snapshot: snapshot,
+        summary: summary,
+        onBack: function () {
+          showForm(definition, formId, suggestions, workspaceId);
+        },
+        onContinueExport: function () {
+          showFilingPackage(definition, formId, suggestions, workspaceId,
+            snapshot, summary, values);
+        },
+      });
+    }
+
+    /**
+     * The Filing Package screen: the prepared documents, ready to download.
+     *
+     * The package is built by the backend from the values captured in review,
+     * so the filed PDF contains exactly the form the user reviewed and compared.
+     */
+    function showFilingPackage(definition, formId, suggestions, workspaceId, snapshot, summary, values) {
+      clear();
+      var payload = {
+        workspace_id: workspaceId || "default",
+        values: values || {},
+        // The fields the renderer actually drew — conditional fields the user
+        // never saw must not appear on the filed document.
+        visible_paths: (snapshot || []).map(function (f) { return f.path; }),
+        counts: summary || {},
+        overrides: (ns.workspaceOverrides && workspaceId)
+          ? ns.workspaceOverrides.merged(workspaceId) : {},
+      };
+
+      ns.downloadView.render(root, {
+        formNumber: definition.formNumber,
+        onDownload: function (part, done) {
+          ns.packageClient.download(formId, part, payload).then(done);
+        },
+        onBack: function () {
+          showComparison(definition, formId, suggestions, workspaceId,
+            snapshot, summary, values);
+        },
+        onAnother: opts.onPrepareAnother || null,
       });
     }
 
@@ -277,7 +462,8 @@ window.PatentFormsApp = window.PatentFormsApp || {};
       showWorkspace: showWorkspace,
       showLoading: showLoading,
       showUnavailable: showUnavailable,
-      showForm: showForm
+      showForm: showForm,
+      showComparison: showComparison
     };
   }
 

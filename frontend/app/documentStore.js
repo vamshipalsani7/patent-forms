@@ -87,12 +87,75 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return loadAll().filter(function (d) { return d.id === id; })[0] || null;
   }
 
+  /**
+   * Reconcile the local record set against the backend's list of documents for
+   * this workspace, making the backend the single source of truth for WHICH
+   * documents exist. Local records are a per-browser cache/annotation layer
+   * (display titles, in-flight status) on top of it.
+   *
+   *   - A backend document not held locally is added, so it shows in the sidebar
+   *     (e.g. uploaded from another browser, or after localStorage was cleared).
+   *   - A document held both places has its detected type and extraction status
+   *     refreshed from the backend, but keeps its local display title.
+   *   - A local document the backend does not know is dropped — UNLESS it is
+   *     still 'pending' (its upload/extraction is in flight and simply hasn't
+   *     reached the backend yet). This is what removes the sidebar/workspace
+   *     desync without deleting a document mid-upload.
+   *
+   * @param {object[]} backendDocs  the workspace summary's `documents` array:
+   *        { document_id, filename, document_type, source_type, status, fact_count }
+   * @returns {object[]} the reconciled local list
+   */
+  function reconcile(backendDocs) {
+    var backend = Array.isArray(backendDocs) ? backendDocs : [];
+    var backendById = {};
+    backend.forEach(function (d) { backendById[d.document_id] = d; });
+
+    var all = loadAll();
+    var localById = {};
+    all.forEach(function (d) { localById[d.id] = d; });
+
+    // Upsert every backend document into the local set.
+    backend.forEach(function (bd) {
+      var existing = localById[bd.document_id];
+      if (existing) {
+        existing.extractionStatus = bd.status;
+        existing.detectedType = bd.source_type || null;
+        existing.detectedTypeLabel = bd.document_type || null;
+        existing.factCount = bd.fact_count || 0;
+        if (!existing.originalFilename) existing.originalFilename = bd.filename;
+      } else {
+        all.push({
+          id: bd.document_id,
+          originalFilename: bd.filename,
+          displayTitle: bd.filename,
+          size: null,
+          uploadedAt: new Date().toISOString(),
+          workspaceId: DEFAULT_WORKSPACE,
+          extractionStatus: bd.status,
+          detectedType: bd.source_type || null,
+          detectedTypeLabel: bd.document_type || null,
+          factCount: bd.fact_count || 0,
+        });
+      }
+    });
+
+    // Drop local records the backend does not have, unless still uploading.
+    all = all.filter(function (d) {
+      return backendById[d.id] || d.extractionStatus === "pending";
+    });
+
+    persist(all);
+    return all;
+  }
+
   function listByWorkspace(workspaceId) {
     return loadAll().filter(function (d) { return d.workspaceId === workspaceId; });
   }
 
   ns.documentStore = {
     list: list, add: add, remove: remove, rename: rename, update: update, get: get,
+    reconcile: reconcile,
     listByWorkspace: listByWorkspace,
     DEFAULT_WORKSPACE: DEFAULT_WORKSPACE
   };

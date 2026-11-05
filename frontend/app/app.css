@@ -193,6 +193,105 @@ body {
 
 .renderer-mount { padding: 8px 4px 40px; }
 
+/* ================= AI Form Review ================= */
+/* In review mode the renderer's developer-facing "definition complete" panel is
+   hidden — the review summary speaks to the user instead. */
+.renderer-mount.review-mode .completeness { display: none; }
+
+.review-header {
+  position: sticky; top: 0; z-index: 6;
+  background: #fff;
+  border-bottom: 1px solid #d8dbe1;
+  padding: 14px 20px 12px;
+}
+.review-form-number { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+.review-form-name { font-size: 16px; font-weight: 600; margin-top: 1px; }
+.review-tagline { font-size: 12.5px; color: #6b7280; margin-top: 3px; }
+
+.review-stats { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
+.review-stat { font-size: 12.5px; color: #374151; }
+.review-stat-n { font-size: 17px; font-weight: 700; color: #111827; }
+.review-stat-l { color: #6b7280; }
+.review-stat-warn .review-stat-n { color: #b45309; }
+
+.review-actions { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.review-fresh { display: inline-flex; align-items: center; gap: 6px; }
+.review-fresh-q { font-size: 12px; color: #b45309; }
+.app-btn.ghost.danger { color: #b91c1c; }
+
+.review-completion {
+  margin: 12px 20px 0;
+  padding: 14px 16px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  border-radius: 10px;
+}
+.review-completion-title { font-size: 15px; font-weight: 700; color: #065f46; }
+.review-completion-body { font-size: 13px; color: #047857; margin: 3px 0 10px; }
+.review-completion-note { font-size: 12px; color: #047857; margin-top: 8px; }
+
+/* ---- per-field review cards (injected by reviewLayer over the renderer) ---- */
+.rev-card {
+  margin: 4px 0 2px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 1px solid #e6e9ee;
+}
+.rev-value { font-size: 14px; color: #111827; font-weight: 500; margin-bottom: 4px; }
+
+.rev-chip-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.rev-chip {
+  font: inherit; font-size: 11.5px; font-weight: 600;
+  border: 1px solid transparent; border-radius: 20px;
+  padding: 2px 10px; cursor: default;
+}
+.rev-chip-caret { font-weight: 400; }
+.rev-chip-from_document { background: #eff6ff; color: #1e40af; border-color: #bfdbfe; cursor: pointer; }
+.rev-chip-entered_by_you { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.rev-chip-selected_during_review { background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe; }
+.rev-chip-edited_by_you { background: #fffbeb; color: #92400e; border-color: #fde68a; }
+
+.rev-linkbtn {
+  font: inherit; font-size: 11.5px; background: none; border: none;
+  color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0;
+}
+.rev-original { font-size: 11.5px; color: #92660f; margin-top: 4px; }
+
+.rev-review-toggle {
+  font: inherit; font-size: 11px; padding: 2px 8px; border-radius: 20px;
+  border: 1px solid #cbd5e1; background: #fff; color: #475569; cursor: pointer;
+}
+.rev-review-toggle.on { background: #065f46; border-color: #065f46; color: #fff; }
+
+.rev-edit {
+  font: inherit; font-size: 11.5px; padding: 2px 10px; border-radius: 6px;
+  border: 1px solid #cbd5e1; background: #fff; color: #334155; cursor: pointer;
+}
+.rev-edit:hover { background: #f1f5f9; }
+.rev-edit-bar { display: flex; gap: 6px; margin-top: 6px; }
+
+.rev-card.rev-missing { background: #fef2f2; border-color: #fecaca; }
+.rev-missing-label { font-size: 13px; font-weight: 700; color: #b91c1c; }
+.rev-missing-note { font-size: 11.5px; color: #991b1b; margin-top: 1px; }
+
+.rev-source-panel {
+  margin-top: 8px; padding: 8px 10px;
+  background: #fff; border: 1px solid #dbe3ef; border-radius: 8px;
+}
+.rev-source-head {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: #6b7280; margin-top: 6px;
+}
+.rev-source-head:first-child { margin-top: 0; }
+.rev-source-name { font-size: 13px; color: #111827; font-weight: 600; }
+.rev-source-page { font-size: 12px; color: #6b7280; }
+.rev-source-text {
+  font-size: 12.5px; color: #374151; margin-top: 2px;
+  background: #f8fafc; padding: 6px 8px; border-radius: 6px;
+  white-space: pre-wrap; word-break: break-word;
+}
+
 /* ---------------- Documents panel (Document Workspace) ---------------- */
 .upload-zone {
   margin: 6px 14px 8px;
@@ -501,3 +600,137 @@ body {
   line-height: 1.7;
 }
 .wsp-empty-hint { color: #6b7280; font-size: 12.5px; }
+.wsp-unavailable .wsp-empty-title { color: #b45309; }
+.wsp-unavailable .app-btn { margin-top: 6px; }
+
+/* ================= Official IPO Comparison ================= */
+.cmp { max-width: 960px; margin: 0 auto; padding: 0 0 60px; }
+
+.cmp-header {
+  position: sticky; top: 0; z-index: 6;
+  background: #fff; border-bottom: 1px solid #d8dbe1; padding: 16px 20px 12px;
+}
+.cmp-form-number { font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: .04em; }
+.cmp-form-name { font-size: 16px; font-weight: 600; margin-top: 1px; }
+.cmp-verified {
+  display: inline-block; margin-top: 6px; font-size: 12px; font-weight: 600;
+  color: #047857; background: #ecfdf5; border: 1px solid #a7f3d0;
+  border-radius: 20px; padding: 2px 10px;
+}
+.cmp-stats { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 10px; }
+.cmp-stat { font-size: 12.5px; color: #374151; }
+.cmp-stat-n { font-size: 17px; font-weight: 700; color: #111827; }
+.cmp-stat-l { color: #6b7280; }
+.cmp-stat-warn .cmp-stat-n { color: #b45309; }
+.cmp-ready { margin-top: 10px; font-size: 14px; font-weight: 700; color: #047857; }
+.cmp-notready { margin-top: 10px; font-size: 13px; color: #b45309; font-weight: 500; }
+
+.cmp-nav { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+.cmp-nav-why { font-size: 12px; color: #6b7280; }
+.app-btn.primary:disabled { background: #cbd5e1; border-color: #cbd5e1; cursor: not-allowed; }
+
+/* Two aligned columns in one scroll — Official (labels) beside Generated
+   (values). One grid means the two sides can never fall out of sync. */
+.cmp-grid { display: grid; grid-template-columns: 1fr 1fr; padding: 0 20px; }
+.cmp-col-head {
+  position: sticky; top: 96px; z-index: 4;
+  background: #f4f6f9; border-bottom: 2px solid #cbd5e1;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: #475569; padding: 8px 12px;
+}
+.cmp-col-generated { border-left: 1px solid #e2e5ea; }
+
+.cmp-section {
+  grid-column: 1 / -1;
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em;
+  color: #6b7280; background: #f8fafc; padding: 8px 12px;
+  border-top: 1px solid #e2e5ea; margin-top: 6px;
+}
+
+.cmp-cell { padding: 9px 12px; border-top: 1px solid #f1f2f4; font-size: 13.5px; }
+.cmp-official { color: #374151; }
+.cmp-generated { border-left: 1px solid #eceef1; }
+.cmp-value { color: #111827; }
+.cmp-chip {
+  display: inline-block; margin-top: 4px; font-size: 10.5px; font-weight: 600;
+  padding: 1px 8px; border-radius: 20px; border: 1px solid transparent;
+}
+/* soft highlights, no warnings */
+.cmp-ai      { background: #f0fdf4; }
+.cmp-ai      .cmp-chip-ai { background: #dcfce7; color: #166534; }
+.cmp-user    { background: #eff6ff; }
+.cmp-user    .cmp-chip-user { background: #dbeafe; color: #1e40af; }
+.cmp-missing { background: #fffbeb; }
+.cmp-missing .cmp-value { color: #b45309; font-weight: 600; }
+.cmp-missing .cmp-chip-missing { background: #fef3c7; color: #92400e; }
+.cmp-office  { background: #f8fafc; }
+.cmp-office  .cmp-value { color: #94a3b8; }
+.cmp-office  .cmp-chip-office { background: #eef2f7; color: #64748b; }
+.cmp-neutral .cmp-value { color: #94a3b8; }
+
+/* ================= Filing Package (download) ================= */
+.pkg { max-width: 720px; margin: 0 auto; padding: 32px 24px 60px; }
+
+.pkg-head { text-align: center; margin-bottom: 22px; }
+.pkg-tick {
+  width: 46px; height: 46px; margin: 0 auto 10px;
+  display: flex; align-items: center; justify-content: center;
+  background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;
+  border-radius: 50%; font-size: 24px; font-weight: 700;
+}
+.pkg-title { font-size: 24px; margin: 0 0 6px; }
+.pkg-sub { color: #4b5563; font-size: 14px; margin: 0; }
+
+.pkg-all { text-align: center; margin-bottom: 20px; }
+.pkg-all-btn { font-size: 15px; padding: 10px 26px; }
+.pkg-status { min-height: 18px; margin-top: 8px; font-size: 12.5px; color: #6b7280; }
+.pkg-status.ok { color: #047857; font-weight: 600; }
+.pkg-status.err { color: #b91c1c; font-weight: 600; }
+.pkg-status.busy { color: #1e40af; }
+
+.pkg-list { background: #fff; border: 1px solid #e2e5ea; border-radius: 10px; padding: 6px 16px 12px; }
+.pkg-list-head {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: #6b7280; padding: 10px 0 6px;
+}
+.pkg-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 0; border-top: 1px solid #f1f2f4;
+}
+.pkg-item-tick { color: #047857; font-weight: 700; flex-shrink: 0; }
+.pkg-item-info { flex: 1 1 auto; min-width: 0; }
+.pkg-item-title { font-size: 13.5px; font-weight: 600; color: #111827; }
+.pkg-item-note { font-size: 12px; color: #6b7280; margin-top: 1px; }
+.pkg-item-btn { flex-shrink: 0; }
+
+.pkg-nav { display: flex; justify-content: space-between; gap: 12px; margin-top: 20px; }
+.pkg-footnote { margin-top: 16px; font-size: 11.5px; color: #8a92a0; text-align: center; }
+
+@media (max-width: 560px) {
+  .pkg-item { flex-wrap: wrap; }
+  .pkg-item-btn { width: 100%; }
+  .pkg-nav { flex-direction: column; }
+}
+
+.cmp-export-note {
+  max-width: 960px; margin: 12px auto 0; padding: 12px 16px;
+  background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;
+  font-size: 13px; color: #1e40af;
+}
+
+.cmp-empty { max-width: 480px; margin: 12vh auto 0; text-align: center; padding: 0 24px; }
+.cmp-empty-icon { font-size: 38px; }
+.cmp-empty-title { font-size: 22px; margin: 10px 0 8px; }
+.cmp-empty-body { color: #4b5563; font-size: 14px; margin: 0 0 14px; }
+
+/* Mobile: stack Official above Generated per field, keep comparison clarity. */
+@media (max-width: 720px) {
+  .cmp-grid { grid-template-columns: 1fr; }
+  .cmp-col-head { display: none; }
+  .cmp-official {
+    border-top: 1px solid #e2e5ea; background: #fbfcfd;
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .04em; color: #64748b; padding-bottom: 2px;
+  }
+  .cmp-generated { border-left: none; border-top: none; padding-top: 2px; }
+}

@@ -108,6 +108,53 @@ describe("documentStore — workspace scoping", () => {
     localStorage.setItem("patentforms.documents", '{"unexpected":"shape"}');
     assert.deepEqual(ns.documentStore.list(), []);
   });
+
+  describe("reconcile — backend is the single source of truth", () => {
+    const backendDoc = (id, over = {}) => Object.assign({
+      document_id: id, filename: id + ".pdf", document_type: "Specification",
+      source_type: "form2_specification", status: "extracted", fact_count: 3,
+    }, over);
+
+    test("adds a backend document the sidebar did not know about", () => {
+      // e.g. uploaded from another browser, or after localStorage was cleared.
+      ns.documentStore.reconcile([backendDoc("doc_remote")]);
+      const listed = ns.documentStore.list();
+      assert.equal(listed.length, 1);
+      assert.equal(listed[0].id, "doc_remote");
+      assert.equal(listed[0].detectedTypeLabel, "Specification");
+      assert.equal(listed[0].extractionStatus, "extracted");
+    });
+
+    test("refreshes status/type of a known document but keeps its display title", () => {
+      ns.documentStore.add(record("doc_1", PATENT_A, "raw-scan.pdf"));
+      ns.documentStore.rename("doc_1", "My Specification");
+      ns.documentStore.reconcile([backendDoc("doc_1", { status: "no_information", fact_count: 0 })]);
+      const doc = ns.documentStore.get("doc_1");
+      assert.equal(doc.displayTitle, "My Specification", "user title must be preserved");
+      assert.equal(doc.extractionStatus, "no_information");
+      assert.equal(doc.factCount, 0);
+    });
+
+    test("drops a local document the backend no longer has", () => {
+      ns.documentStore.add(record("doc_gone", PATENT_A));
+      ns.documentStore.add(record("doc_kept", PATENT_A));
+      ns.documentStore.reconcile([backendDoc("doc_kept")]);
+      const ids = ns.documentStore.list().map((d) => d.id);
+      assert.deepEqual(ids, ["doc_kept"], "stale local doc should be removed");
+    });
+
+    test("keeps an in-flight (pending) upload the backend has not seen yet", () => {
+      ns.documentStore.add(Object.assign(record("doc_uploading", PATENT_A), { extractionStatus: "pending" }));
+      ns.documentStore.reconcile([]); // backend has nothing yet
+      assert.ok(ns.documentStore.get("doc_uploading"), "a pending upload must survive reconcile");
+    });
+
+    test("an empty backend list clears finished local docs (the desync fix)", () => {
+      ns.documentStore.add(record("doc_1", PATENT_A));
+      ns.documentStore.reconcile([]);
+      assert.deepEqual(ns.documentStore.list(), []);
+    });
+  });
 });
 
 describe("documentUpload — ingestion stamps the workspace", () => {

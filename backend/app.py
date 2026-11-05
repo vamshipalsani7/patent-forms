@@ -21,6 +21,8 @@ from typing import Optional
 
 from fastapi import FastAPI, Form, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from pydantic import BaseModel, Field
 
 # Ensure backend/ packages are importable when the process is started from
 # the project root (uvicorn backend.app:app) or from inside backend/.
@@ -37,6 +39,7 @@ from extractor.document_reader import (
 )
 from extractor.profile_builder import ProfileBuilder
 from models.patent_profile import PatentProfile
+from packaging.package import PARTS as PACKAGE_PARTS, build_package
 from storage.content_store import ContentStore, UnsafeIdentifierError, validate_identifier
 from workspace.summary import build_workspace_summary, source_type_label
 
@@ -207,6 +210,43 @@ def _empty_extract(document_id, workspace_id, filename, page_count):
 
 
 # --------------------------------------------------------------------------
+# Shared helpers
+# --------------------------------------------------------------------------
+
+def _load_definition(form_id: str) -> dict:
+    """Read one form definition, or fail with a clear HTTP error.
+
+    The single place that turns a form id into a definition, so the suggestions
+    and packaging endpoints cannot disagree about where definitions live or how
+    a missing one is reported.
+    """
+    definition_path = _DEFINITIONS_DIR / f"{form_id}.definition.json"
+    if not definition_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No definition found for '{form_id}' at {definition_path}.",
+        )
+    try:
+        return json.loads(definition_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"Definition JSON invalid: {exc}") from exc
+
+
+def _suggestions_for(definition: dict, workspace_id: str, decisions: dict) -> dict:
+    """Mapper suggestions for one workspace, as plain dicts with a source label."""
+    extracts = _store.extracts_for_workspace(workspace_id)
+    profile = PatentProfile(workspace_id=workspace_id, extracts=extracts)
+    suggestions_map = _mapper.get_suggestions(definition, profile, overrides=decisions)
+
+    out: dict = {}
+    for path, s in suggestions_map.items():
+        payload = s.to_dict()
+        payload["source_label"] = source_type_label(s.fact.source_type)
+        out[path] = payload
+    return out
+
+
+# --------------------------------------------------------------------------
 # Suggestions endpoint
 # --------------------------------------------------------------------------
 
@@ -250,28 +290,14 @@ def get_suggestions(form_id: str, workspace_id: str, overrides: Optional[str] = 
             # fall back to extractions only.
             decisions = {}
 
-    definition_path = _DEFINITIONS_DIR / f"{form_id}.definition.json"
-    if not definition_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"No definition found for '{form_id}' at {definition_path}.",
-        )
-
-    try:
-        definition = json.loads(definition_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        raise HTTPException(status_code=500, detail=f"Definition JSON invalid: {exc}") from exc
-
-    extracts = _store.extracts_for_workspace(workspace_id)
-    profile = PatentProfile(workspace_id=workspace_id, extracts=extracts)
-    suggestions_map = _mapper.get_suggestions(definition, profile, overrides=decisions)
-
+    definition = _load_definition(form_id)
+    # The friendly source name the review UI shows ("From Complete
+    # Specification") travels with each suggestion, so the interface never has
+    # to render a raw sourceType.
     return {
         "form_id": form_id,
         "workspace_id": workspace_id,
-        "suggestions": {
-            path: s.to_dict() for path, s in suggestions_map.items()
-        },
+        "suggestions": _suggestions_for(definition, workspace_id, decisions),
     }
 
 
@@ -307,3 +333,88 @@ def get_workspace(workspace_id: str):
     extracts = _store.extracts_for_workspace(workspace_id)
     profile = PatentProfile(workspace_id=workspace_id, extracts=extracts)
     return build_workspace_summary(profile)
+
+
+# --------------------------------------------------------------------------
+# Filing package endpoint
+# --------------------------------------------------------------------------
+
+class FilingPackageRequest(BaseModel):
+    """What the review screen knows and the package needs.
+
+    `values` and `visible_paths` come from the renderer, so the filed document
+    contains exactly the form the user reviewed. `counts` are the review's own
+    numbers, so the filing summary reports what the user saw rather than a second
+    opinion computed here.
+    """
+
+    workspace_id: str
+    values: dict = Field(default_factory=dict)
+    visible_paths: list = Field(default_factory=list)
+    counts: dict = Field(default_factory=dict)
+    overrides: dict = Field(default_factory=dict)
+
+
+@app.post("/api/package/{form_id}")
+def build_filing_package(form_id: str, request: FilingPackageRequest, part: str = "zip"):
+    """Prepare the filing package for a completed form and return one part of it.
+
+    The package is always built as a whole — official PDF, editable DOCX, filing
+    summary and provenance report — so the user never has to choose what to
+    generate. `part` selects which of them (or the ZIP of all four) is returned
+    by this request.
+
+    Provenance is derived from the same mapper suggestions the review used, and
+    the document list from the same workspace summary, so the paperwork agrees
+    with what the user saw on screen.
+
+    Args:
+        form_id: e.g. 'form_18'.
+        part:    'zip' (default) | 'pdf' | 'docx' | 'summary' | 'provenance'.
+
+    Returns:
+        The file, with a professional download filename.
+    """
+    try:
+        validate_identifier(request.workspace_id, "workspace_id")
+    except UnsafeIdentifierError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    if part not in PACKAGE_PARTS + ("zip",):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unknown package part '{part}'. "
+                   f"Expected one of: {', '.join(PACKAGE_PARTS + ('zip',))}.",
+        )
+
+    definition = _load_definition(form_id)
+    suggestions = _suggestions_for(definition, request.workspace_id, request.overrides)
+
+    extracts = _store.extracts_for_workspace(request.workspace_id)
+    profile = PatentProfile(workspace_id=request.workspace_id, extracts=extracts)
+    summary = build_workspace_summary(profile)
+    # Name the documents the way the workspace named them, and only those that
+    # actually contributed something.
+    documents = [
+        d["document_type"] for d in summary.get("documents", [])
+        if d.get("fact_count")
+    ]
+
+    package = build_package(
+        definition=definition,
+        values=request.values,
+        visible_paths=request.visible_paths,
+        counts=request.counts,
+        documents=documents,
+        suggestions=suggestions,
+    )
+    chosen = package[part]
+    return Response(
+        content=chosen["bytes"],
+        media_type=chosen["media_type"],
+        headers={
+            "Content-Disposition": f'attachment; filename="{chosen["filename"]}"',
+            # The browser must be able to read the filename it should save as.
+            "Access-Control-Expose-Headers": "Content-Disposition",
+        },
+    )

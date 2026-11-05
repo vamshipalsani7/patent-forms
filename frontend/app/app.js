@@ -22,7 +22,11 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     var formsEl = document.getElementById("forms-panel");
     var mainEl = document.getElementById("main");
 
-    var mainArea = ns.mainArea.mount(mainEl);
+    var mainArea = ns.mainArea.mount(mainEl, {
+      // After a filing package is prepared, "Prepare another form" sends the
+      // user back to choose the next filing action for the same matter.
+      onPrepareAnother: function () { refreshWorkspace(); focusForms(); },
+    });
 
     // One workspace for now (single patent matter). Taken from documentStore so
     // upload and retrieval cannot disagree about its name.
@@ -33,18 +37,30 @@ window.PatentFormsApp = window.PatentFormsApp || {};
       if (search) search.focus();
     }
 
+    var docPanel = null;
+
     // Fetch the consolidated summary and render the Patent Workspace. Always
-    // safe to call — the view's own empty state covers "no documents yet".
+    // safe to call — the view's own empty state covers "no documents yet", and
+    // its unavailable state covers "the service is unreachable".
     function refreshWorkspace() {
       ns.extractionClient.getWorkspace(workspaceId).then(function (summary) {
+        if (!summary.unavailable) {
+          // The backend answered: it is the source of truth for which documents
+          // exist. Reconcile the sidebar to it so the two can never disagree.
+          ns.documentStore.reconcile(summary.documents || []);
+          if (docPanel) docPanel.refresh();
+        }
+        // When unavailable we deliberately do NOT reconcile — an empty error
+        // response must not be mistaken for "the user deleted everything".
         mainArea.showWorkspace(summary, {
           workspaceId: workspaceId,
           onChooseForm: focusForms,
+          onRetry: refreshWorkspace,
         });
       });
     }
 
-    ns.documentWorkspace.mount(documentsEl, {
+    docPanel = ns.documentWorkspace.mount(documentsEl, {
       // Fires when documents are added/removed AND when an extraction result
       // lands — either way the consolidated view may have changed.
       onChange: refreshWorkspace,
@@ -69,7 +85,7 @@ window.PatentFormsApp = window.PatentFormsApp || {};
           var suggestionResult = results[1];
           var suggestions = suggestionResult.suggestions || {};
           ns.suggestionStore.setSuggestions(formId, suggestions, workspaceId);
-          mainArea.showForm(definition, formId, suggestions);
+          mainArea.showForm(definition, formId, suggestions, workspaceId);
         }).catch(function (error) {
           mainArea.showUnavailable(meta, error);
         });

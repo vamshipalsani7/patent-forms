@@ -30,12 +30,14 @@ window.PatentFormsApp = window.PatentFormsApp || {};
    * @param {string}   formId
    * @param {object}   values           — current renderer values (flat path→value)
    * @param {string[]} userEditedPaths  — paths where user value differs from suggestion
+   * @param {string[]} [reviewedPaths]  — paths the user marked as reviewed
    */
-  function saveDraft(formId, values, userEditedPaths) {
+  function saveDraft(formId, values, userEditedPaths, reviewedPaths) {
     var record = {
       formId: formId,
       values: values,
       userEditedPaths: userEditedPaths || [],
+      reviewedPaths: reviewedPaths || [],
       savedAt: new Date().toISOString(),
     };
     localStorage.setItem(NAMESPACE + formId, JSON.stringify(record));

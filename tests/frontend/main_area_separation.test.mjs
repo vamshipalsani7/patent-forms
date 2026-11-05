@@ -50,7 +50,7 @@ describe("mainArea — suggested vs user-entered separation", () => {
   let ns, renderer, container, area;
 
   beforeEach(() => {
-    ({ ns } = bootstrap("dom.js", "formState.js", "mainArea.js"));
+    ({ ns } = bootstrap("dom.js", "reviewModel.js", "reviewLayer.js", "comparisonView.js", "packageClient.js", "downloadView.js", "formState.js", "mainArea.js"));
     renderer = installRendererStub();
     container = makeContainer();
     area = ns.mainArea.mount(container);
@@ -221,83 +221,69 @@ describe("mainArea — suggested vs user-entered separation", () => {
     });
   });
 
-  describe("Start Fresh", () => {
-    test("discards the draft and returns to the suggested values", () => {
+  describe("Start over (two-step inline confirm, no browser dialog)", () => {
+    const startOver = () => findByText(container, "Start over").click();
+
+    test("discards the draft and returns to the suggested values on confirm", () => {
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
       renderer.userEdits({ "sec.a": "User Correction" });
       save();
 
-      findByText(container, "Start Fresh").click();
+      startOver();
+      findByText(container, "Discard").click();
 
       assert.equal(ns.formState.loadDraft(FORM_ID), null, "draft was not cleared");
       assert.deepEqual(renderer.setValuesCalls.at(-1), { "sec.a": "Acme Ltd" });
     });
 
-    test("clears the user-edited set", () => {
+    test("clears the user-edited set once discarded and re-saved", () => {
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
       renderer.userEdits({ "sec.a": "User Correction" });
       save();
 
-      findByText(container, "Start Fresh").click();
+      startOver();
+      findByText(container, "Discard").click();
       save();
 
       assert.deepEqual(draft().userEditedPaths, []);
     });
 
-    test("does nothing when the confirmation is declined", () => {
-      globalThis.window.confirm = () => false;
+    test("keeps the draft when the confirm is declined — no window.confirm used", () => {
+      // Sabotage the browser dialog: if the code reached for it, this throws.
+      globalThis.window.confirm = () => { throw new Error("window.confirm must not be used"); };
 
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
       renderer.userEdits({ "sec.a": "User Correction" });
       save();
 
-      findByText(container, "Start Fresh").click();
+      startOver();
+      findByText(container, "Keep").click();
 
-      assert.ok(ns.formState.loadDraft(FORM_ID), "draft was cleared despite declining");
+      assert.ok(ns.formState.loadDraft(FORM_ID), "draft was cleared despite keeping");
     });
   });
 
-  describe("provenance is visible to the user", () => {
-    test("a banner reports how many fields were auto-filled", () => {
-      area.showForm(DEFINITION, FORM_ID, {
-        "sec.a": suggestion("Acme Ltd"),
-        "sec.b": suggestion("202211012345"),
-      });
-      assert.equal(findByClass(container, "provenance-count").textContent, "2 fields auto-filled");
-    });
-
-    test("the count is singular for one field", () => {
+  // Per-field provenance is now shown on each field by the review layer, not in
+  // a single banner. Its behaviour (From <source> · Page · Confidence, source
+  // panel, Entered/Selected/Edited/Missing states) is covered end-to-end in
+  // review_layer.test.mjs and review_model.test.mjs. Here we only assert that
+  // mainArea presents the live Review Summary header above the form.
+  describe("review summary header", () => {
+    test("names the form and offers the review stat labels", () => {
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
-      assert.equal(findByClass(container, "provenance-count").textContent, "1 field auto-filled");
+      const header = findByClass(container, "review-header");
+      assert.ok(header, "no review header rendered");
+      assert.match(header.textContent, /Form 3/);
+      assert.match(header.textContent, /Statement and Undertaking/);
+      assert.match(header.textContent, /Auto-filled/);
+      assert.match(header.textContent, /Reviewed/);
+      assert.match(header.textContent, /Edited by you/);
+      assert.match(header.textContent, /Missing/);
     });
 
-    test("no banner is shown when nothing was auto-filled", () => {
+    test("mounts the form in review mode so the renderer's dev panel is hidden", () => {
       area.showForm(DEFINITION, FORM_ID, {});
-      assert.equal(findByClass(container, "provenance-banner"), null);
-    });
-
-    test("each suggestion's source document, page, method and confidence are shown", () => {
-      area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
-
-      const source = findByClass(container, "provenance-src").textContent;
-      assert.match(source, /form1/, "source document type is missing");
-      assert.match(source, /p\.1/, "page number is missing");
-      assert.match(source, /anchor/, "extraction method is missing");
-      assert.match(source, /80% conf/, "confidence is missing");
-    });
-
-    test("the sources panel can be expanded and collapsed", () => {
-      area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
-
-      const detail = findByClass(container, "provenance-detail");
-      const toggle = findByClass(container, "provenance-toggle");
-
-      assert.equal(detail.style.display, "none", "sources should start collapsed");
-      toggle.click();
-      assert.equal(detail.style.display, "block");
-      assert.equal(toggle.textContent, "Hide sources");
-      toggle.click();
-      assert.equal(detail.style.display, "none");
+      assert.ok(findByClass(container, "review-mode"), "form not mounted in review mode");
     });
   });
 
@@ -306,10 +292,12 @@ describe("mainArea — suggested vs user-entered separation", () => {
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
       renderer.userEdits({ "sec.a": "x" });
       save();
-      findByText(container, "Start Fresh").click();
+      findByText(container, "Start over").click();
+      findByText(container, "Discard").click();
 
-      // The stub exposes nothing beyond the approved surface, so reaching the
-      // end of this flow without a TypeError is the assertion.
+      // The stub exposes nothing beyond the approved surface (mount/getValues/
+      // setValues/getGaps/getFindings/unmount + onChange/onGapsChange callbacks),
+      // so reaching the end of this flow without a TypeError is the assertion.
       assert.equal(renderer.mountCount, 1);
     });
 
@@ -326,11 +314,6 @@ describe("mainArea — suggested vs user-entered separation", () => {
   });
 
   describe("draft status feedback", () => {
-    test("reports the number of auto-filled fields on a fresh form", () => {
-      area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
-      assert.match(findByClass(container, "draft-status").textContent, /auto-filled/);
-    });
-
     test("reports unsaved changes after an edit", () => {
       area.showForm(DEFINITION, FORM_ID, { "sec.a": suggestion("Acme Ltd") });
       renderer.userEdits({ "sec.a": "x" });

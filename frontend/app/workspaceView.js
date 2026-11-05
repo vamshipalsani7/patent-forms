@@ -341,6 +341,26 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     return wrap;
   }
 
+  // ------------------------------------------------------- unavailable state
+
+  // The backend could not be reached. This is deliberately distinct from the
+  // empty state: the user's documents are not gone, we just cannot load them
+  // right now. Offer a clear explanation and a way to try again.
+  function renderUnavailable(onRetry) {
+    var wrap = el("div", "wsp-empty wsp-unavailable");
+    wrap.appendChild(el("div", "wsp-empty-icon", "⚠️"));
+    wrap.appendChild(el("h1", "wsp-empty-title", "Can’t reach the service"));
+    wrap.appendChild(el("p", "wsp-empty-body",
+      "We couldn’t load your patent matter. Your uploaded documents are safe — the service just isn’t responding right now. Check that it’s running, then try again."));
+    if (typeof onRetry === "function") {
+      var retry = el("button", "app-btn primary", "Try again");
+      retry.type = "button";
+      retry.addEventListener("click", function () { onRetry(); });
+      wrap.appendChild(retry);
+    }
+    return wrap;
+  }
+
   // -------------------------------------------------------------- empty state
 
   function renderEmpty() {
@@ -376,6 +396,12 @@ window.PatentFormsApp = window.PatentFormsApp || {};
     opts = opts || {};
     var workspaceId = opts.workspaceId || "default";
     container.innerHTML = "";
+
+    // Backend unreachable — a distinct, recoverable state, not "no documents".
+    if (summary && summary.unavailable) {
+      container.appendChild(renderUnavailable(opts.onRetry));
+      return;
+    }
 
     if (!summary || !summary.documents || !summary.documents.length) {
       container.appendChild(renderEmpty());

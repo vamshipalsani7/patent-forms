@@ -276,6 +276,78 @@ class TestSuggestionsOverrides(IsolatedStoreTestCase):
         self.assertIn("suggestions", result)
 
 
+class TestFilingPackageEndpoint(IsolatedStoreTestCase):
+    """POST /api/package/{form_id} — the filing package the user downloads."""
+
+    def _request(self, **over):
+        payload = {
+            "workspace_id": WORKSPACE,
+            "values": {"requester.name": "ACME INNOVATIONS PRIVATE LIMITED"},
+            "visible_paths": ["requester.name"],
+            "counts": {"autoFilled": 1, "edited": 0, "missing": 0},
+            "overrides": {},
+        }
+        payload.update(over)
+        return app_module.FilingPackageRequest(**payload)
+
+    def test_every_part_is_served_with_a_professional_filename(self):
+        expected = {
+            "pdf": ("application/pdf", "Form18_RequestExpressExamination.pdf"),
+            "docx": ("wordprocessingml", "Form18_RequestExpressExamination.docx"),
+            "summary": ("application/pdf", "Form18_FilingSummary.pdf"),
+            "provenance": ("application/pdf", "Form18_Provenance.pdf"),
+            "zip": ("application/zip", "Form18_FilingPackage.zip"),
+        }
+        for part, (media, filename) in expected.items():
+            with self.subTest(part=part):
+                response = app_module.build_filing_package("form_18", self._request(), part=part)
+                self.assertTrue(response.body)
+                self.assertIn(media, response.media_type)
+                self.assertIn(filename, response.headers["content-disposition"])
+
+    def test_the_default_part_is_the_complete_package(self):
+        response = app_module.build_filing_package("form_18", self._request())
+        self.assertEqual("application/zip", response.media_type)
+
+    def test_the_filed_pdf_contains_the_values_the_user_reviewed(self):
+        response = app_module.build_filing_package("form_18", self._request(), part="pdf")
+        self.assertTrue(response.body.startswith(b"%PDF"))
+        import io as _io
+
+        import pdfplumber
+        with pdfplumber.open(_io.BytesIO(response.body)) as doc:
+            text = "\n".join((p.extract_text() or "") for p in doc.pages)
+        self.assertIn("ACME INNOVATIONS", text)
+
+    def test_an_unknown_part_is_rejected(self):
+        with self.assertRaises(HTTPException) as caught:
+            app_module.build_filing_package("form_18", self._request(), part="exe")
+        self.assertEqual(400, caught.exception.status_code)
+
+    def test_an_unknown_form_is_reported_as_missing(self):
+        with self.assertRaises(HTTPException) as caught:
+            app_module.build_filing_package("form_999", self._request())
+        self.assertEqual(404, caught.exception.status_code)
+
+    def test_a_bad_workspace_id_is_rejected(self):
+        with self.assertRaises(HTTPException) as caught:
+            app_module.build_filing_package("form_18", self._request(workspace_id="../escape"))
+        self.assertEqual(400, caught.exception.status_code)
+
+    def test_the_summary_names_the_documents_that_contributed(self):
+        self.store.save_extract(_extract(
+            "spec", _fact("invention.title", "A Widget", source_type="form2_specification"),
+            source_type="form2_specification",
+        ))
+        response = app_module.build_filing_package("form_18", self._request(), part="summary")
+        import io as _io
+
+        import pdfplumber
+        with pdfplumber.open(_io.BytesIO(response.body)) as doc:
+            text = "\n".join((p.extract_text() or "") for p in doc.pages)
+        self.assertIn("Specification", text)
+
+
 class TestWorkspaceEndpoint(IsolatedStoreTestCase):
     """GET /api/workspace/{id} — the Patent Workspace's data source."""
 

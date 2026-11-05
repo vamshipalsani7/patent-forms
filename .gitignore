@@ -14,7 +14,10 @@ env/
 # Uploads & Runtime Data
 # =========================
 backend/uploads/
-backend/workspace/
+# NOTE: do NOT ignore backend/workspace/ — despite the name it is a SOURCE
+# package (the WorkspaceSummary projection imported by app.py), not runtime
+# data. Runtime data lives under backend/uploads/. Ignoring it here previously
+# caused the package to be silently untracked and deleted by `git clean`.
 
 # Python cache
 .pytest_cache/

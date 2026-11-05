@@ -5,10 +5,15 @@
  * `path#count`, because flattenSuggestions() copying suggestion values into
  * initialValues is the only channel by which anything reaches renderer state.
  * It is renderer bookkeeping, not an extracted value, so it must still be
- * passed through to the renderer while being kept out of the provenance
- * banner — otherwise the user is shown a "field" named
- * `inventors.inventor#count` holding the number 2, and the auto-filled count
- * is inflated by one per repeatable group.
+ * passed through to the renderer.
+ *
+ * That it is NOT surfaced to the user is now structural rather than a filter:
+ * `#count` is not a rendered field node, so the review layer — which only
+ * decorates and counts data-path leaf fields — never gives it a card or counts
+ * it. That guarantee is asserted in review_layer.test.mjs ("a suggestion with
+ * no field in the form neither decorates nor inflates the count"). Here we keep
+ * the pass-through guarantee: the count and each instance value still reach the
+ * renderer's initialValues.
  */
 
 import { test, describe, beforeEach } from "node:test";
@@ -60,7 +65,7 @@ describe("mainArea — structural suggestions", () => {
   let ns, renderer, container, area;
 
   beforeEach(() => {
-    ({ ns } = bootstrap("dom.js", "formState.js", "mainArea.js"));
+    ({ ns } = bootstrap("dom.js", "reviewModel.js", "reviewLayer.js", "comparisonView.js", "packageClient.js", "downloadView.js", "formState.js", "mainArea.js"));
     renderer = installRendererStub();
     container = makeContainer();
     area = ns.mainArea.mount(container);
@@ -83,44 +88,10 @@ describe("mainArea — structural suggestions", () => {
       assert.equal(typeof renderer.initialValues["inventors.inventor.0.name"], "string");
       assert.equal(typeof renderer.initialValues["inventors.inventor#count"], "number");
     });
-  });
 
-  describe("keeping bookkeeping out of the provenance banner", () => {
-    const bannerText = () => {
-      const banner = findByClass(container, "provenance-banner");
-      return banner ? banner.textContent : "";
-    };
-
-    test("the count is not listed as an auto-filled field", () => {
-      area.showForm(DEFINITION, FORM_ID, twoInventors());
-      assert.ok(!bannerText().includes("#count"), "banner leaked renderer bookkeeping");
-    });
-
-    test("the auto-filled tally counts only real values", () => {
-      area.showForm(DEFINITION, FORM_ID, twoInventors());
-      assert.ok(bannerText().includes("2 fields auto-filled"), bannerText());
-    });
-
-    test("real suggested values are still listed", () => {
-      area.showForm(DEFINITION, FORM_ID, twoInventors());
-      assert.ok(bannerText().includes("RAJESH KUMAR"));
-      assert.ok(bannerText().includes("PRIYA SHARMA"));
-    });
-
-    test("a suggestion set that is entirely structural shows no banner", () => {
-      area.showForm(DEFINITION, FORM_ID, {
-        "inventors.inventor#count": structural(1),
-      });
-      assert.equal(findByClass(container, "provenance-banner"), null);
-    });
-
-    test("suggestions without the structural flag are treated as visible", () => {
-      // Backwards compatibility: a cached suggestion payload written before
-      // `structural` existed has no such key, and must still be listed.
-      area.showForm(DEFINITION, FORM_ID, {
-        "sec.a": { value: "Acme Ltd", fact: fact("Acme Ltd") },
-      });
-      assert.ok(bannerText().includes("1 field auto-filled"), bannerText());
+    test("an entirely-structural suggestion set still mounts a review, not a crash", () => {
+      area.showForm(DEFINITION, FORM_ID, { "inventors.inventor#count": structural(1) });
+      assert.equal(renderer.initialValues["inventors.inventor#count"], 1);
     });
   });
 });

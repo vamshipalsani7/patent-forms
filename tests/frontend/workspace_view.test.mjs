@@ -64,6 +64,25 @@ describe("workspaceView", () => {
     });
   });
 
+  describe("unavailable state (backend unreachable)", () => {
+    test("shows a distinct error with a retry, not the empty state", () => {
+      let retried = 0;
+      render({ documents: [], sections: [], missing: [], stats: {}, unavailable: true },
+        { onRetry: () => { retried += 1; } });
+      const text = container.textContent;
+      assert.match(text, /Can’t reach the service/i);
+      assert.doesNotMatch(text, /Start a patent matter/i, "must not look like an empty workspace");
+      assert.match(text, /documents are safe/i);
+      findByText(container, "Try again").click();
+      assert.equal(retried, 1);
+    });
+
+    test("an available-but-empty workspace still shows the empty state", () => {
+      render({ documents: [], sections: [], missing: [], stats: {} });
+      assert.match(container.textContent, /Start a patent matter/i);
+    });
+  });
+
   describe("grouped facts with provenance", () => {
     test("renders section labels and field values", () => {
       render(baseSummary());
